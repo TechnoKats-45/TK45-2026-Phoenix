@@ -45,12 +45,13 @@ public class Feeder extends SubsystemBase {
 
     private static final double SPEED_TOLERANCE_RPS = 0.5;
     //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
-        private final TalonFX feeder1;
-        private final TalonFX feeder2;
+        private final TalonFX left_feeder;
+        private final TalonFX right_feeder;
     public Feeder() {
-        feeder1 = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        feeder2 = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        configureMotor();
+        left_feeder = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
+        right_feeder = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
+        configureMotor(left_feeder, MOTOR_INVERTED, "Left Feeder");
+        configureMotor(right_feeder, MOTOR_INVERTED, "Right Feeder");
 
         // Initialize feeder-specific components here
     }
@@ -70,42 +71,41 @@ public class Feeder extends SubsystemBase {
         // Code to stop the feeder mechanism
         // This could involve stopping motors or other hardware specific to the feeder
     }
-       private void configureMotor() {
-        TalonFXConfiguration ballElevatorConfigs = new TalonFXConfiguration()
+    private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
+        TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
                         .withSupplyCurrentLimit(SUPPLY_CURRENT_LIMIT_AMPS)
-                        .withStatorCurrentLimitEnable(true)
-                        .withSupplyCurrentLimitEnable(true))
+                        .withStatorCurrentLimitEnable(true))
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO))
+                .withMotionMagic(new MotionMagicConfigs()
+                        .withMotionMagicCruiseVelocity(RotationsPerSecond.of(MM_CRUISE_RPS))
+                        .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2)))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT0_KS)
                         .withKV(SLOT0_KV)
                         .withKP(SLOT0_KP)
                         .withKI(SLOT0_KI)
                         .withKD(SLOT0_KD));
-        MotionMagicConfigs mm = ballElevatorConfigs.MotionMagic;
-        mm.withMotionMagicCruiseVelocity(RotationsPerSecond.of(MM_CRUISE_RPS))
-                .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2));
-        // .withMotionMagicJerk(RotationsPerSecondPerSecond.per(Second).of(10));
 
-        ballElevatorConfigs.MotorOutput.Inverted = MOTOR_INVERTED;
-        ballElevatorConfigs.Voltage
+        shooterConfigs.MotorOutput.Inverted = invertedValue;
+        shooterConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        shooterConfigs.Voltage
                 .withPeakForwardVoltage(Volts.of(PEAK_FORWARD_VOLTS))
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
         for (int i = 0; i < CONFIG_RETRIES; ++i) {
-            status = ballElevatorMotor.getConfigurator().apply(ballElevatorConfigs);
+            status = motor.getConfigurator().apply(shooterConfigs);
             if (status.isOK()) {
                 break;
             }
         }
 
         if (!status.isOK()) {
-            System.out.println("Could not apply configs for ball elevator, error code: " + status);
+            System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
     
