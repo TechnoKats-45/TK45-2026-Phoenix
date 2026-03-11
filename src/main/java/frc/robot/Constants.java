@@ -67,7 +67,7 @@ public class Constants {
 
     public class Shooter 
     {
-
+            public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
     }
 
     public class Hood 
@@ -82,7 +82,7 @@ public class Constants {
     
     public class Feeder 
     {
-
+            public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
     }
 
     public class Vision 

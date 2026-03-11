@@ -41,10 +41,11 @@ public class Shooter extends SubsystemBase {
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
     private static final InvertedValue MOTOR_INVERTED = InvertedValue.CounterClockwise_Positive;
-        private static final InvertedValue MOTOR_CLOCKWISE = InvertedValue.Clockwise_Positive;
+    private static final InvertedValue MOTOR_CLOCKWISE = InvertedValue.Clockwise_Positive;
+
+    private double currentSpeedSetpointRps = 0.0;
 
 
-    private static final double SPEED_TOLERANCE_RPS = 0.5;
     //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
         private final TalonFX left_shooter;
         private final TalonFX right_shooter;
@@ -69,9 +70,21 @@ public class Shooter extends SubsystemBase {
     }
     public void shoot(double speedRPS) {
         left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
+        currentSpeedSetpointRps = speedRPS;
     }
     public void stopShooting() {
         left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
+        currentSpeedSetpointRps = 0.0;
+    }
+        public double getSpeed() {
+        return (left_shooter.getVelocity().getValueAsDouble()
+            + left_middle_shooter.getVelocity().getValueAsDouble()
+                + right_shooter.getVelocity().getValueAsDouble()
+                    + + right_middle_shooter.getVelocity().getValueAsDouble()) / 4.0;
+    }
+    public boolean isAtSpeed() 
+    {
+        return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Shooter.SPEED_TOLERANCE_RPS;
     }
         private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
@@ -110,5 +123,13 @@ public class Shooter extends SubsystemBase {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
-    
+    public void printDiagnostics() {
+        SmartDashboard.putNumber("Shooter Current Speed RPS", getSpeed());
+        SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
+        SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());
+        SmartDashboard.putNumber("Shooter Current", left_shooter.getSupplyCurrent().getValueAsDouble()
+            + left_middle_shooter.getSupplyCurrent().getValueAsDouble()
+                + right_shooter.getSupplyCurrent().getValueAsDouble()
+                    + right_middle_shooter.getSupplyCurrent().getValueAsDouble());
+    }
 }

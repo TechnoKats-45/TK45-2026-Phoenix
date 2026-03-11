@@ -42,8 +42,8 @@ public class Feeder extends SubsystemBase {
     private static final double PEAK_REVERSE_VOLTS = -16.0;
     private static final InvertedValue MOTOR_INVERTED = InvertedValue.CounterClockwise_Positive;
 
+    private double currentSpeedSetpointRps = 0.0;
 
-    private static final double SPEED_TOLERANCE_RPS = 0.5;
     //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
         private final TalonFX left_feeder;
         private final TalonFX right_feeder;
@@ -58,9 +58,19 @@ public class Feeder extends SubsystemBase {
     }
     public void setFeederSpeed(double speedRPS) {
         left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
+        currentSpeedSetpointRps = speedRPS;
     }
     public void stopFeeding() {
-left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
+        left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
+        currentSpeedSetpointRps = 0.0;
+    }
+    public double getSpeed() {
+        return (left_feeder.getVelocity().getValueAsDouble()
+            + right_feeder.getVelocity().getValueAsDouble()) / 2.0;
+    }
+    public boolean isAtSpeed() 
+    {
+        return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Feeder.SPEED_TOLERANCE_RPS;
     }
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
@@ -98,6 +108,13 @@ left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
         if (!status.isOK()) {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
+    }
+    public void printDiagnostics() {
+        SmartDashboard.putNumber("Shooter Current Speed RPS", getSpeed());
+        SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
+        SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());
+        SmartDashboard.putNumber("Shooter Current", (left_feeder.getSupplyCurrent().getValueAsDouble()
+            + right_feeder.getSupplyCurrent().getValueAsDouble())/2.0);
     }
     
 }
