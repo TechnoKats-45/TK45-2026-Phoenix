@@ -51,38 +51,28 @@ public class Shooter extends SubsystemBase {
         private final TalonFX left_middle_shooter;
         private final TalonFX right_middle_shooter;
     public Shooter() {
-        left_shooter = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        right_shooter = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        left_middle_shooter = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        right_middle_shooter = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        configureMotor(left_shooter, MOTOR_INVERTED, "Left Shooter");
-        configureMotor(right_shooter, MOTOR_CLOCKWISE, "Right Shooter");
-        configureMotor(left_middle_shooter, MOTOR_INVERTED, "Left Middle Shooter");
+        // declare all motors
+        left_shooter = new TalonFX(Constants.CAN_ID.LEFT_SHOOTER, Constants.CAN_BUS.CANIVORE);
+        right_shooter = new TalonFX(Constants.CAN_ID.RIGHT_SHOOTER, Constants.CAN_BUS.CANIVORE);
+        left_middle_shooter = new TalonFX(Constants.CAN_ID.LEFT_MIDDLE_SHOOTER, Constants.CAN_BUS.CANIVORE);
+        right_middle_shooter = new TalonFX(Constants.CAN_ID.RIGHT_MIDDLE_SHOOTER, Constants.CAN_BUS.CANIVORE);
+        // configure motors
         configureMotor(right_middle_shooter, MOTOR_CLOCKWISE, "Right Middle Shooter");
-
+        configureMotor(right_shooter, MOTOR_CLOCKWISE, "Right Shooter");
+        configureMotor(left_shooter, MOTOR_INVERTED, "Left Shooter");
+        configureMotor(left_middle_shooter, MOTOR_INVERTED, "Left Middle Shooter");
+        // set followers
+        right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
+        right_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
+        left_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
         // Initialize feeder-specific components here
     }
-
-    @Override
-    public void periodic() {
-        super.periodic();
-        // Add any feeder-specific periodic actions here
-    }
-
     public void shoot(double speedRPS) {
-        /* un edited code from previous robot TODO - edit to work with the 4 new shooter motors
-        currentSpeedSetpointRps = Math.max(0.0, speedRps);
-        shooterLeftMotor.setControl(velocityRequest.withVelocity(currentSpeedSetpointRps));
-        shooterRightMotor.setControl(new Follower(Constants.CAN_ID.SHOOTER_LEFT, RIGHT_FOLLOW_ALIGNMENT));
-        SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
-        */
+        left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
     }
-
-    public void stopFeeding() {
-        // Code to stop the feeder mechanism
-        // This could involve stopping motors or other hardware specific to the feeder
+    public void stopShooting() {
+        left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
     }
-    
         private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
@@ -109,7 +99,7 @@ public class Shooter extends SubsystemBase {
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
-        for (int i = 0; i < CONFIG_RETRIES; ++i) {
+        for (int i = 0; i < Constants.CONFIG_RETRIES; ++i) {
             status = motor.getConfigurator().apply(shooterConfigs);
             if (status.isOK()) {
                 break;

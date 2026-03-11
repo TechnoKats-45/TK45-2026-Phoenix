@@ -48,28 +48,19 @@ public class Feeder extends SubsystemBase {
         private final TalonFX left_feeder;
         private final TalonFX right_feeder;
     public Feeder() {
-        left_feeder = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
-        right_feeder = new TalonFX(Constants.CAN_ID.BALL_ELEVATOR, Constants.CAN_BUS.CANIVORE);
+        left_feeder = new TalonFX(Constants.CAN_ID.LEFT_FEEDER, Constants.CAN_BUS.CANIVORE);
+        right_feeder = new TalonFX(Constants.CAN_ID.RIGHT_FEEDER, Constants.CAN_BUS.CANIVORE);
         configureMotor(left_feeder, MOTOR_INVERTED, "Left Feeder");
         configureMotor(right_feeder, MOTOR_INVERTED, "Right Feeder");
+        right_feeder.setControl(new Follower(left_feeder.getDeviceID(), MotorAlignmentValue.Opposed));
 
         // Initialize feeder-specific components here
     }
-
-    @Override
-    public void periodic() {
-        super.periodic();
-        // Add any feeder-specific periodic actions here
+    public void setFeederSpeed(double speedRPS) {
+        left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
     }
-
-    public void feed() {
-        // Code to activate the feeder mechanism
-        // This could involve controlling motors or other hardware specific to the feeder
-    }
-
     public void stopFeeding() {
-        // Code to stop the feeder mechanism
-        // This could involve stopping motors or other hardware specific to the feeder
+left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
     }
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
@@ -97,7 +88,7 @@ public class Feeder extends SubsystemBase {
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
-        for (int i = 0; i < CONFIG_RETRIES; ++i) {
+        for (int i = 0; i < Constants.CONFIG_RETRIES; ++i) {
             status = motor.getConfigurator().apply(shooterConfigs);
             if (status.isOK()) {
                 break;

@@ -72,7 +72,7 @@ public class Intake extends SubsystemBase
     private static final double SLOT1_KI = 0.0; // TODO TUNE
     private static final double SLOT1_KD = 1.0; // TODO TUNE
 
-    //Roller Inverted Values TODO TUNE
+    //Roller Inverted Values TODO - TUNE
     private static final InvertedValue LEFT_ROLLER_INVERTED = InvertedValue.CounterClockwise_Positive;
     private static final InvertedValue RIGHT_ROLLER_INVERTED = InvertedValue.Clockwise_Positive;
     private static final MotorAlignmentValue RIGHT_FOLLOW_ROLLER_ALIGNMENT = MotorAlignmentValue.Opposed;
