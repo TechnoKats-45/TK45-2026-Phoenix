@@ -2,6 +2,7 @@ import org.gradle.internal.os.OperatingSystem
 
 pluginManagement {
     repositories {
+
         mavenLocal()
         gradlePluginPortal()
         String frcYear = '2026'
@@ -28,3 +29,5 @@ pluginManagement {
 
 Properties props = System.getProperties();
 props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
+include ':houndutil'
+rootProject.children[0].buildFileName = "submodule.gradle"
