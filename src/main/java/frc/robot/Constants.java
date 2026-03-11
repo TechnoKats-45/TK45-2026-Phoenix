@@ -77,8 +77,10 @@ public class Constants {
 
     public class Floor 
     {
-
+        public static final double FLOOR_SPEED = 0.5; // TODO - TUNE
+        public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
     }
+    
     
     public class Feeder 
     {
