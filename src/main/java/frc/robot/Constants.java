@@ -57,7 +57,12 @@ public class Constants {
     
     public class Intake
     {
-        
+        public static final double INTAKE_SPEED = 0.5; // TODO - TUNE
+        public static final double INTAKE_ROTATE_SPEED = 0.5; // TODO - TUNE
+        public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
+        public static final double PIVOT_ANGLE_DOWN = 0.0;
+        public static final double PIVOT_ANGLE_UP_STOWED = 9; // TODO - tune
+        public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
     }
 
     public class Shooter 
