@@ -57,7 +57,7 @@ public class RobotContainer {
         registerNamedCommands();
         configureBindings();
     }
-    
+
     public void registerNamedCommands()
     {
     NamedCommands.registerCommand(
@@ -72,6 +72,40 @@ public class RobotContainer {
         )
     )
 );
+    NamedCommands.registerCommand(
+    "StowAndIntake",
+    new SequentialCommandGroup(
+        Commands.runOnce(() -> 
+        s_intake.runFeed(0)
+        ),
+        new WaitCommand(0.2),
+        Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)
+            
+        )
+    )
+);
+    NamedCommands.registerCommand(
+    "Dump Hopper",
+    new SequentialCommandGroup(
+        Commands.runOnce(() -> 
+        s_floor.runFeed(50)
+        ),
+        Commands.runOnce(() -> s_feeder.setFeederSpeed(50)),
+        new WaitCommand(1), 
+        Commands.runOnce(() -> s_shooter.shoot(50))
+        )
+    );
+    NamedCommands.registerCommand(
+    "stop hopper dump",
+    new SequentialCommandGroup(
+        Commands.runOnce(() -> 
+        s_floor.runFeed(0)
+        ),
+        Commands.runOnce(() -> s_feeder.setFeederSpeed(0)),
+        new WaitCommand(1), 
+        Commands.runOnce(() -> s_shooter.shoot(0))
+        )
+    );
     }
 
     private void configureBindings() {

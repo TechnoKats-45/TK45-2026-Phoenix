@@ -56,6 +56,7 @@ public class Feeder extends SubsystemBase {
 
         // Initialize feeder-specific components here
     }
+    // Make this based off percent?
     public void setFeederSpeed(double speedRPS) {
         left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
