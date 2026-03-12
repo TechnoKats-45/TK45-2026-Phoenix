@@ -10,14 +10,21 @@ import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
+import edu.wpi.first.wpilibj2.command.ParallelDeadlineGroup;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+
+import com.pathplanner.lib.auto.NamedCommands;
 
 public class RobotContainer {
     // Declare and instantiate variables:
@@ -39,8 +46,56 @@ public class RobotContainer {
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
     public RobotContainer() {
+        registerNamedCommands();
         configureBindings();
     }
+    public void registerNamedCommands()
+    {
+    /*   NamedCommands.registerCommand(
+            "DeployAndIntake",
+            new ParallelDeadlineGroup(
+                new SequentialCommandGroup(
+                    new WaitCommand(1),
+                            () -> {
+                                s_intake.setAngle(Constants.LeftIntake.PIVOT_ANGLE_DOWN);
+                                WaitCommand(1.5);
+                                s_intake.runFeed(Constants.LeftIntake.INTAKE_SPEED);
+                                
+                            },
+
+            )
+        );
+        */
+/* 
+        NamedCommands.registerCommand(
+            "UndeployAndStopIntake",
+            new ParallelCommandGroup(
+                new AutoAim(drivetrain, s_shooter, s_hood, s_turret, s_shotCalculator),
+                Commands.startEnd(
+                    () -> {
+                        SmartDashboard.putBoolean("AutoAim/UsePassingTarget", true);
+                        l_Intake.setAngle(Constants.LeftIntake.PIVOT_ANGLE_UP_STOWED);
+                        l_Intake.stop();
+                        r_Intake.setAngle(Constants.RightIntake.PIVOT_ANGLE_DOWN);
+                        r_Intake.runFeed(Constants.RightIntake.INTAKE_SPEED);
+                        s_ballElevator.dumbSpeed(1);
+                        s_spindex.runFeed(1);
+                    },
+                    () -> {
+                        r_Intake.stop();
+                        r_Intake.setAngle(Constants.RightIntake.PIVOT_ANGLE_UP_STOWED);
+                        s_ballElevator.stop();
+                        s_spindex.stop();
+                        SmartDashboard.putBoolean("AutoAim/UsePassingTarget", false);
+                    },
+                    l_Intake,
+                    r_Intake,
+                    s_ballElevator,
+                    s_spindex)
+            )
+        );
+    }
+        */
 
     private void configureBindings() {
         // Note that X is defined as forward according to WPILib convention,
