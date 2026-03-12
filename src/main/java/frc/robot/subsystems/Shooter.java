@@ -22,7 +22,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Shooter extends SubsystemBase {
 
@@ -80,7 +79,7 @@ public class Shooter extends SubsystemBase {
         return (left_shooter.getVelocity().getValueAsDouble()
             + left_middle_shooter.getVelocity().getValueAsDouble()
                 + right_shooter.getVelocity().getValueAsDouble()
-                    + + right_middle_shooter.getVelocity().getValueAsDouble()) / 4.0;
+                    + right_middle_shooter.getVelocity().getValueAsDouble()) / 4.0;
     }
     public boolean isAtSpeed() 
     {
