@@ -72,8 +72,13 @@ public class Constants {
 
     public class Hood 
     {
-
+    
+        public static final double ROTATE_SPEED = 0.5; // TODO - TUNE
+        public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
+        public static final double HOOD_ANGLE_DOWN = 0.0;
+        public static final double HOOD_ANGLE_UP_STOWED = 9; // TODO - tune
     }
+    
 
     public class Floor 
     {
