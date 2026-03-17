@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.AutoAim;
+import frc.robot.commands.AutoIntake;
 import frc.robot.subsystems.Feeder;
 import frc.robot.subsystems.Floor;
 import frc.robot.subsystems.Hood;
@@ -33,7 +34,8 @@ import frc.robot.Constants;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
-public class RobotContainer {
+public class RobotContainer 
+{
     // Declare and instantiate variables:
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
@@ -66,6 +68,113 @@ public class RobotContainer {
         configureBindings();
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private void configureBindings() 
+    {
+        // Note that X is defined as forward according to WPILib convention,
+        // and Y is defined as to the left according to WPILib convention.
+        drivetrain.setDefaultCommand(
+            // Drivetrain will execute this command periodically
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(-driver.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driver.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(-driver.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+            )
+        );
+
+        // Idle while the robot is disabled. This ensures the configured
+        // neutral mode is applied to the drive motors while disabled.
+        final var idle = new SwerveRequest.Idle();
+        RobotModeTriggers.disabled().whileTrue(
+            drivetrain.applyRequest(() -> idle).ignoringDisable(true)
+        ); 
+        
+        drivetrain.registerTelemetry(logger::telemeterize);
+            
+        // Assign Test controls:
+        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.setShooterPercent(1)));  // Max is 100
+        testController.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
+
+        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(1)));    // Max is 100
+        testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.stop()));
+
+        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.setFloorPercent(0.5)));
+        testController.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.stop()));
+
+        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.setIntakePercent(1)));
+        testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.stop()));
+
+
+        // Assign Driver Controls:
+        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
+
+        driver.leftTrigger().whileTrue(new AutoAim(     // Auto aims swerve, hood, and shooter speed while left trigger held.
+            drivetrain,
+            s_vision,
+            s_hood,
+            s_shooter,
+            driver::getLeftY,
+            driver::getLeftX,
+            driver.getHID(),
+            MaxSpeed,
+            MaxAngularRate
+        ));
+        
+        driver.rightTrigger().whileTrue(new ParallelCommandGroup    // Run the floor and feeder to shoot balls while right trigger held.
+            (
+                Commands.runOnce(() -> s_floor.setFloorPercent(Constants.Floor.SHOOT_SPEED)),
+                Commands.runOnce(() -> s_feeder.setFeederPercent(Constants.Feeder.SHOOT_SPEED))
+            )
+        );
+
+        driver.rightBumper().toggleOnTrue(new AutoIntake(s_intake, s_floor));   // Toggle the intake and floor to intake balls when right bumper pressed.
+        
+        driver.leftBumper().whileTrue(Commands.startEnd(    // Run the intake, floor, and feeder in reverse to eject balls while left bumper held - for unjamming or dumping.
+            () -> {
+                s_intake.setIntakePercent(-Constants.Intake.INTAKE_SPEED);
+                s_floor.setFloorPercent(-Constants.Floor.FLOOR_SPEED);
+                s_feeder.setFeederPercent(-Constants.Feeder.FEEDER_SPEED);
+            },
+            () -> {
+                s_intake.stop();
+                s_floor.stop();
+                s_feeder.stop();
+            },
+            s_intake,
+            s_floor,
+            s_feeder
+        ));
+        
+        
+        // Assign Operator Controls:
+        // ...
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public Command getAutonomousCommand() 
+    {
+        // Simple drive forward auton
+        final var idle = new SwerveRequest.Idle();
+        return Commands.sequence(
+            // Reset our field centric heading to match the robot
+            // facing away from our alliance station wall (0 deg).
+            drivetrain.runOnce(() -> drivetrain.seedFieldCentric(Rotation2d.kZero)),
+            // Then slowly drive forward (away from us) for 5 seconds.
+            drivetrain.applyRequest(() ->
+                drive.withVelocityX(0.5)
+                    .withVelocityY(0)
+                    .withRotationalRate(0)
+            )
+            .withTimeout(5.0),
+            // Finally idle for the rest of auton
+            drivetrain.applyRequest(() -> idle)
+        );
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// Registers all named commands for the robot.
     public void registerNamedCommands()
     {
         NamedCommands.registerCommand(
@@ -109,106 +218,16 @@ public class RobotContainer {
         "StopHopperDump",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
-            s_floor.setSpeed(0)
+            s_floor.stop()
             ),
             Commands.runOnce(() -> s_feeder.setFeederSpeed(0)),
             new WaitCommand(1), 
             Commands.runOnce(() -> s_shooter.shoot(0))
             )
         );
+
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        // TODO - JON
     }
-
-    private void configureBindings() 
-    {
-        // Note that X is defined as forward according to WPILib convention,
-        // and Y is defined as to the left according to WPILib convention.
-        drivetrain.setDefaultCommand(
-            // Drivetrain will execute this command periodically
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(-driver.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-driver.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-driver.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
-            )
-        );
-
-        // Idle while the robot is disabled. This ensures the configured
-        // neutral mode is applied to the drive motors while disabled.
-        final var idle = new SwerveRequest.Idle();
-        RobotModeTriggers.disabled().whileTrue(
-            drivetrain.applyRequest(() -> idle).ignoringDisable(true)
-        );
-
-        // Run SysId routines when holding back/start and X/Y.
-        // Note that each routine should be run exactly once in a single log.
-        /*
-        driver.back().and(driver.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        driver.back().and(driver.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        driver.start().and(driver.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        driver.start().and(driver.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
-        */    
-        
-        drivetrain.registerTelemetry(logger::telemeterize);
-            
-        // Assign Test controls:
-        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.setShooterPercent(1)));  // Max is 100
-        testController.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
-
-        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(1)));    // Max is 100
-        testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.stop()));
-
-        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.setFloorPercent(0.5)));
-        testController.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.stop()));
-
-        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.setIntakePercent(1)));
-        testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.stop()));
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        // Assign Driver Controls:
-        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
-        driver.leftTrigger().whileTrue(new AutoAim(
-            drivetrain,
-            s_vision,
-            s_hood,
-            s_shooter,
-            driver::getLeftY,
-            driver::getLeftX,
-            driver.getHID(),
-            MaxSpeed,
-            MaxAngularRate
-        ));
-        
-        driver.rightTrigger().whileTrue(new ParallelCommandGroup
-            (
-                Commands.runOnce(() -> s_floor.setFloorPercent(Constants.Floor.ShootSpeed)),
-                Commands.runOnce(() -> s_feeder.setFeederSpeed(Constants.Feeder.ShootSpeed))
-            )
-        );
-
-        driver.rightBumper().onTrue(/*/ toggle autointake*/);
-        driver.leftBumper().whileTrue(/*/ reverse intake, floor, and feeder for unjam */);
-        
-        // Assign Operator Controls:
-        // ...
-    }
-
-    public Command getAutonomousCommand() {
-        // Simple drive forward auton
-        final var idle = new SwerveRequest.Idle();
-        return Commands.sequence(
-            // Reset our field centric heading to match the robot
-            // facing away from our alliance station wall (0 deg).
-            drivetrain.runOnce(() -> drivetrain.seedFieldCentric(Rotation2d.kZero)),
-            // Then slowly drive forward (away from us) for 5 seconds.
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(0.5)
-                    .withVelocityY(0)
-                    .withRotationalRate(0)
-            )
-            .withTimeout(5.0),
-            // Finally idle for the rest of auton
-            drivetrain.applyRequest(() -> idle)
-        );
-    }
-
 }

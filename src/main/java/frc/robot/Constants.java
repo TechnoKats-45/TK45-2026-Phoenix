@@ -57,12 +57,13 @@ public class Constants
     
     public class Intake
     {
-        public static final double INTAKE_SPEED = 0.5; // TODO - TUNE
-        public static final double INTAKE_ROTATE_SPEED = 0.5; // TODO - TUNE
+        public static final double INTAKE_SPEED = 1;            // TODO - TUNE
+        public static final double SPEED_TOLERANCE_RPS = 0.5;   // TODO - TUNE
+
+        public static final double INTAKE_ROTATE_SPEED = 0.5;   // TODO - TUNE
+        public static final double PIVOT_ANGLE_DOWN = 0;      // TODO - TUNE
         public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
-        public static final double PIVOT_ANGLE_DOWN = 0.0;
-        public static final double PIVOT_ANGLE_UP_STOWED = 9; // TODO - tune
-        public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+        public static final double PIVOT_ANGLE_UP_STOWED = 0;   // TODO - tune
     }
 
     public class Shooter 
@@ -117,13 +118,15 @@ public class Constants
     public class Floor 
     {
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
-        public static final double ShootSpeed = .5; // TODO - TUNE
+        public static final double FLOOR_SPEED = 0.5; // TODO - TUNE
+        public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
     }
     
     public class Feeder 
     {
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
-        public static final double ShootSpeed = 0.5; // TODO - TUNE
+        public static final double FEEDER_SPEED = 0.5; // TODO - TUNE
+        public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
     }
 
     public class Vision

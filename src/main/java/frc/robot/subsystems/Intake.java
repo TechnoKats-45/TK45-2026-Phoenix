@@ -22,7 +22,6 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.Constants.CAN_BUS;
 
 public class Intake extends SubsystemBase 
 {   
@@ -117,7 +116,6 @@ public class Intake extends SubsystemBase
     {
         currentAngleSetPoint = angle;
         intake_left_pivot_motor.setControl(motionMagicVoltage.withPosition(angle));
-        intake_right_pivot_motor.setControl(new Follower(Constants.CAN_ID.INTAKE_LEFT_PIVOT, RIGHT_FOLLOW_PIVOT_ALIGNMENT));
         SmartDashboard.putNumber("Intake Set Point", angle);
     }
 
@@ -133,13 +131,10 @@ public class Intake extends SubsystemBase
     
     public void setSpeed(double speedRps) 
     {
-        currentSpeedSetpointRps = Math.max(0.0, speedRps);
+        currentSpeedSetpointRps = speedRps;
         intake_left_roller_motor.setControl(velocityRequest.withVelocity(currentSpeedSetpointRps));
-        intake_right_pivot_motor.setControl(new Follower(Constants.CAN_ID.INTAKE_LEFT_PIVOT, RIGHT_FOLLOW_PIVOT_ALIGNMENT));
-        SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
-    
     public void setIntakePercent(double percentOutput) 
     {
         double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
@@ -151,7 +146,7 @@ public class Intake extends SubsystemBase
         return (intake_left_roller_motor.getVelocity().getValueAsDouble() + intake_right_roller_motor.getVelocity().getValueAsDouble()) / 2.0 ; 
     }
 
-    public boolean isAtSpeed(double toleranceRps) 
+    public boolean isAtSpeed()
     {
         return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Intake.SPEED_TOLERANCE_RPS;
     }
@@ -164,13 +159,13 @@ public class Intake extends SubsystemBase
         SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
-    public void setBrakeMode(boolean enableBrake)
+    public void stow() 
     {
-        
+        setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED);
     }
 
-
-    private void configurePivotMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
+    private void configurePivotMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
+    {
         TalonFXConfiguration intakePivotConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS_PIVOT)
@@ -196,19 +191,23 @@ public class Intake extends SubsystemBase
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS_PIVOT));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
-        for (int i = 0; i < CONFIG_RETRIES; ++i) {
+        for (int i = 0; i < CONFIG_RETRIES; ++i) 
+        {
             status = motor.getConfigurator().apply(intakePivotConfigs);
-            if (status.isOK()) {
+            if (status.isOK()) 
+            {
                 break;
             }
         }
 
-        if (!status.isOK()) {
+        if (!status.isOK()) 
+        {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
 
-    private void configureRollerMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
+    private void configureRollerMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
+    {
         TalonFXConfiguration intakePivotConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS_ROLLER)
@@ -234,25 +233,29 @@ public class Intake extends SubsystemBase
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS_ROLLER));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
-        for (int i = 0; i < CONFIG_RETRIES; ++i) {
+        for (int i = 0; i < CONFIG_RETRIES; ++i) 
+        {
             status = motor.getConfigurator().apply(intakePivotConfigs);
-            if (status.isOK()) {
+            if (status.isOK()) 
+            {
                 break;
             }
         }
 
-        if (!status.isOK()) {
+        if (!status.isOK())
+        {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
 
-    public void printDiagnostics() {
+    public void printDiagnostics() 
+    {
         SmartDashboard.putNumber("Intake Current Angle", getAngle());
         SmartDashboard.putNumber("Intake Angle Setpoint", currentAngleSetPoint);
         SmartDashboard.putBoolean("Intake Is Aligned", isAligned());
         SmartDashboard.putNumber(" Intake Current Speed RPS", getSpeed());
         SmartDashboard.putNumber(" Intake Speed Setpoint RPS", currentSpeedSetpointRps);
-        SmartDashboard.putBoolean("Intake Is At Speed", isAtSpeed(Constants.Intake.SPEED_TOLERANCE_RPS));
+        SmartDashboard.putBoolean("Intake Is At Speed", isAtSpeed());
         SmartDashboard.putNumber("Intake Pivot Current", intake_left_pivot_motor.getSupplyCurrent().getValueAsDouble());
         SmartDashboard.putNumber("Intake Roller Current", intake_left_roller_motor.getSupplyCurrent().getValueAsDouble());
     }
