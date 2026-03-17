@@ -34,45 +34,59 @@ public class Feeder extends SubsystemBase {
 
     private static final double SLOT0_KS = 0; // TODO - tune
     private static final double SLOT0_KV = 0.0; // TODO - tune
-    private static final double SLOT0_KP = .55; // TODO - tune
+    private static final double SLOT0_KP = .1; // TODO - tune
     private static final double SLOT0_KI = 0.0; // TODO - tune
     private static final double SLOT0_KD = 0.0; // TODO - tune
 
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
-    private static final InvertedValue MOTOR_INVERTED = InvertedValue.CounterClockwise_Positive;
 
     private double currentSpeedSetpointRps = 0.0;
 
     //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
         private final TalonFX left_feeder;
         private final TalonFX right_feeder;
-    public Feeder() {
+    public Feeder() 
+    {
         left_feeder = new TalonFX(Constants.CAN_ID.LEFT_FEEDER, Constants.CAN_BUS.CANIVORE);
         right_feeder = new TalonFX(Constants.CAN_ID.RIGHT_FEEDER, Constants.CAN_BUS.CANIVORE);
-        configureMotor(left_feeder, MOTOR_INVERTED, "Left Feeder");
-        configureMotor(right_feeder, MOTOR_INVERTED, "Right Feeder");
+        configureMotor(left_feeder, InvertedValue.CounterClockwise_Positive, "Left Feeder");
+        configureMotor(right_feeder, InvertedValue.Clockwise_Positive, "Right Feeder");
         right_feeder.setControl(new Follower(left_feeder.getDeviceID(), MotorAlignmentValue.Opposed));
 
         // Initialize feeder-specific components here
     }
+
     // Make this based off percent?
-    public void setFeederSpeed(double speedRPS) {
+    public void setFeederSpeed(double speedRPS) 
+    {
         left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
     }
-    public void stopFeeding() {
+
+    public void stopFeeding() 
+    {
         left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
         currentSpeedSetpointRps = 0.0;
     }
-    public double getSpeed() {
+
+    public double getSpeed() 
+    {
         return (left_feeder.getVelocity().getValueAsDouble()
             + right_feeder.getVelocity().getValueAsDouble()) / 2.0;
     }
+
     public boolean isAtSpeed() 
     {
         return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Feeder.SPEED_TOLERANCE_RPS;
     }
+
+    public void stop() 
+    {
+        left_feeder.set(0);
+        right_feeder.set(0);
+    }   
+
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
@@ -110,7 +124,9 @@ public class Feeder extends SubsystemBase {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
-    public void printDiagnostics() {
+
+    public void printDiagnostics() 
+    {
         SmartDashboard.putNumber("Shooter Current Speed RPS", getSpeed());
         SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
         SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());

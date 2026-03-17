@@ -96,7 +96,7 @@ public class Hood extends SubsystemBase
                         .withKD(SLOT0_KD));
 
         floorConfigs.MotorOutput.Inverted = invertedValue;
-        floorConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        floorConfigs.MotorOutput.NeutralMode = NeutralModeValue.brake;
         floorConfigs.Voltage
                 .withPeakForwardVoltage(Volts.of(PEAK_FORWARD_VOLTS))
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));

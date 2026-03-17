@@ -25,57 +25,69 @@ import frc.robot.Constants;
 
 public class Shooter extends SubsystemBase {
 
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 120;   // 120
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;   // 60
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
     private static final double MM_CRUISE_RPS = 120;
     private static final double MM_ACCEL_RPS2 = 5;
 
     private static final double SLOT0_KS = 0; // TODO - tune
     private static final double SLOT0_KV = 0.0; // TODO - tune
-    private static final double SLOT0_KP = .55; // TODO - tune
+    private static final double SLOT0_KP = 1; // TODO - tune
     private static final double SLOT0_KI = 0.0; // TODO - tune
     private static final double SLOT0_KD = 0.0; // TODO - tune
 
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
-    private static final InvertedValue MOTOR_INVERTED = InvertedValue.CounterClockwise_Positive;
-    private static final InvertedValue MOTOR_CLOCKWISE = InvertedValue.Clockwise_Positive;
 
     private double currentSpeedSetpointRps = 0.0;
-
 
     //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
         private final TalonFX left_shooter;
         private final TalonFX right_shooter;
         private final TalonFX left_middle_shooter;
         private final TalonFX right_middle_shooter;
-    public Shooter() {
+    public Shooter() 
+    {
         // declare all motors
         left_shooter = new TalonFX(Constants.CAN_ID.LEFT_SHOOTER, Constants.CAN_BUS.CANIVORE);
         right_shooter = new TalonFX(Constants.CAN_ID.RIGHT_SHOOTER, Constants.CAN_BUS.CANIVORE);
         left_middle_shooter = new TalonFX(Constants.CAN_ID.LEFT_MIDDLE_SHOOTER, Constants.CAN_BUS.CANIVORE);
         right_middle_shooter = new TalonFX(Constants.CAN_ID.RIGHT_MIDDLE_SHOOTER, Constants.CAN_BUS.CANIVORE);
         // configure motors
-        configureMotor(right_middle_shooter, MOTOR_CLOCKWISE, "Right Middle Shooter");
-        configureMotor(right_shooter, MOTOR_CLOCKWISE, "Right Shooter");
-        configureMotor(left_shooter, MOTOR_INVERTED, "Left Shooter");
-        configureMotor(left_middle_shooter, MOTOR_INVERTED, "Left Middle Shooter");
+        configureMotor(right_middle_shooter, InvertedValue.Clockwise_Positive, "Right Middle Shooter");
+        configureMotor(right_shooter, InvertedValue.CounterClockwise_Positive, "Right Shooter");
+        configureMotor(left_shooter, InvertedValue.Clockwise_Positive, "Left Shooter");
+        configureMotor(left_middle_shooter, InvertedValue.CounterClockwise_Positive, "Left Middle Shooter");
         // set followers
-        right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
+        right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
         right_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
-        left_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
+        left_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
         // Initialize feeder-specific components here
     }
-    public void shoot(double speedRPS) {
+    
+    public void shoot(double speedRPS) 
+    {
         left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
     }
-    public void stopShooting() {
+
+    public void stopShooting() 
+    {
         left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
         currentSpeedSetpointRps = 0.0;
     }
-        public double getSpeed() {
+
+    public void stop()
+    {
+        left_shooter.set(0);
+        right_shooter.set(0);
+        left_middle_shooter.set(0);
+        right_middle_shooter.set(0);
+    }
+
+    public double getSpeed() 
+    {
         return (left_shooter.getVelocity().getValueAsDouble()
             + left_middle_shooter.getVelocity().getValueAsDouble()
                 + right_shooter.getVelocity().getValueAsDouble()

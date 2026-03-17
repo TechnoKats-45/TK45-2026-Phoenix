@@ -25,7 +25,7 @@ import frc.robot.subsystems.Floor;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Shooter;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.Drivetrain;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -45,7 +45,7 @@ public class RobotContainer {
 
     private final CommandXboxController driver = new CommandXboxController(0);
 
-    public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+    public final Drivetrain drivetrain = TunerConstants.createDrivetrain();
 
     private final Intake s_intake = new Intake();
     private final Shooter s_shooter = new Shooter();
@@ -133,28 +133,39 @@ public class RobotContainer {
 
         // Run SysId routines when holding back/start and X/Y.
         // Note that each routine should be run exactly once in a single log.
+        /*
         driver.back().and(driver.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
         driver.back().and(driver.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
         driver.start().and(driver.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
         driver.start().and(driver.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+        */    
+        
+        drivetrain.registerTelemetry(logger::telemeterize);
 
         // Reset the field-centric heading on left bumper press.
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+            
+        // Assign Driver controls:
+        driver.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.shoot(33)));  // Max is 100
+        driver.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
 
-        drivetrain.registerTelemetry(logger::telemeterize);
-            //make controls:
-        driver.rightBumper().onTrue(s_shooter.runOnce(() -> s_shooter.shoot(0.5)));
-        driver.leftBumper().onTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.5)));
-        driver.leftTrigger().onTrue(s_floor.runOnce(() -> s_floor.runFeed(0.5)));
-        driver.rightTrigger().onTrue(s_intake.runOnce(() -> s_intake.runFeed(0.5)));
+        driver.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(33)));    // Max is 100
+        driver.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
+
+        driver.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.runFeed(0.125)));
+        driver.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
+
+        driver.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.runFeed(0.125)));
+        driver.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
+        
         //off toggles:
-        driver.povRight().onTrue(s_shooter.runOnce(() -> s_shooter.shoot(0.0)));
-        driver.povLeft().onTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
-        driver.povDown().onTrue(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
-        driver.povUp().onTrue(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
+        //driver.povRight().onTrue(s_shooter.runOnce(() -> s_shooter.shoot(0.0)));
+        //driver.povLeft().onTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
+        //driver.povDown().onTrue(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
+        //driver.povUp().onTrue(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
         //Pivot:
-        driver.a().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)));
-        driver.y().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)));
+        //driver.a().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)));
+        //driver.y().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)));
     }
 
     public Command getAutonomousCommand() {
