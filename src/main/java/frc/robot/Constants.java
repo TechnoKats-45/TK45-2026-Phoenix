@@ -67,7 +67,7 @@ public class Constants {
 
     public class Shooter 
     {
-            public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+        public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
     }
 
     public class Hood 
@@ -92,9 +92,33 @@ public class Constants {
             public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
     }
 
-    public class Vision 
+    public class Vision
     {
-        
+        // Match these exactly to PhotonVision camera names on the coprocessor.
+        public static final String LEFT_CAMERA_NAME = "Photon_Left";
+        public static final String RIGHT_CAMERA_NAME = "Photon_Right";
+
+        // Robot-to-camera transforms using measured offsets from robot center.
+        // Input measurements were inches; converted here to meters.
+        public static final Transform3d ROBOT_TO_LEFT_CAMERA = new Transform3d(
+                new Translation3d(
+                        -13.265234 * 0.0254,
+                        5.229871 * 0.0254,
+                        8.127905 * 0.0254),
+                new Rotation3d(
+                        0.0,
+                        Math.toRadians(10.0),
+                        Math.toRadians(-165.0)));
+
+        public static final Transform3d ROBOT_TO_RIGHT_CAMERA = new Transform3d(
+                new Translation3d(
+                        -13.265234 * 0.0254,
+                        -5.229871 * 0.0254,
+                        8.127905 * 0.0254),
+                new Rotation3d(
+                        0.0,
+                        Math.toRadians(10.0),
+                        Math.toRadians(165.0)));
     }
 }
 

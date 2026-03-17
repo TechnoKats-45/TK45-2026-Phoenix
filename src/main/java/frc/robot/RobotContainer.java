@@ -44,6 +44,8 @@ public class RobotContainer {
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
     private final CommandXboxController driver = new CommandXboxController(0);
+    private final CommandXboxController operator = new CommandXboxController(1);
+    private final CommandXboxController testController = new CommandXboxController(2);
 
     public final Drivetrain drivetrain = TunerConstants.createDrivetrain();
 
@@ -52,62 +54,66 @@ public class RobotContainer {
     private final Feeder s_feeder = new Feeder();
     private final Floor s_floor = new Floor();
 
-    public RobotContainer() {
+    public RobotContainer() 
+    {
         registerNamedCommands();
         configureBindings();
     }
 
     public void registerNamedCommands()
     {
-    NamedCommands.registerCommand(
-    "DeployAndIntake",
-    new SequentialCommandGroup(
-        Commands.runOnce(() -> 
-            s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)
-        ),
-        new WaitCommand(1.5),
-        Commands.runOnce(() -> 
-            s_intake.runFeed(Constants.Intake.INTAKE_SPEED)
-        )
-    )
-);
-    NamedCommands.registerCommand(
-    "StowAndIntake",
-    new SequentialCommandGroup(
-        Commands.runOnce(() -> 
-        s_intake.runFeed(0)
-        ),
-        new WaitCommand(0.2),
-        Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)
-            
-        )
-    )
-);
-    NamedCommands.registerCommand(
-    "DumpHopper",
-    new SequentialCommandGroup(
-        Commands.runOnce(() -> 
-        s_floor.runFeed(50)
-        ),
-        Commands.runOnce(() -> s_feeder.setFeederSpeed(50)),
-        new WaitCommand(1), 
-        Commands.runOnce(() -> s_shooter.shoot(50))
-        )
-    );
-    NamedCommands.registerCommand(
-    "StopHopperDump",
-    new SequentialCommandGroup(
-        Commands.runOnce(() -> 
-        s_floor.runFeed(0)
-        ),
-        Commands.runOnce(() -> s_feeder.setFeederSpeed(0)),
-        new WaitCommand(1), 
-        Commands.runOnce(() -> s_shooter.shoot(0))
-        )
-    );
+        NamedCommands.registerCommand(
+        "DeployAndIntake",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> 
+                s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)
+            ),
+            new WaitCommand(1.5),
+            Commands.runOnce(() -> 
+                s_intake.runFeed(Constants.Intake.INTAKE_SPEED)
+            )
+            )
+        );
+
+        NamedCommands.registerCommand(
+        "StowAndIntake",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> 
+            s_intake.runFeed(0)
+            ),
+            new WaitCommand(0.2),
+            Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)
+                )
+            )
+        );
+
+        NamedCommands.registerCommand(
+        "DumpHopper",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> 
+            s_floor.runFeed(50)
+            ),
+            Commands.runOnce(() -> s_feeder.setFeederSpeed(50)),
+            new WaitCommand(1), 
+            Commands.runOnce(() -> s_shooter.shoot(50))
+            )
+        );
+
+        NamedCommands.registerCommand(
+        "StopHopperDump",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> 
+            s_floor.runFeed(0)
+            ),
+            Commands.runOnce(() -> s_feeder.setFeederSpeed(0)),
+            new WaitCommand(1), 
+            Commands.runOnce(() -> s_shooter.shoot(0))
+            )
+        );
     }
 
-    private void configureBindings() {
+    private void configureBindings() 
+    {
         // Note that X is defined as forward according to WPILib convention,
         // and Y is defined as to the left according to WPILib convention.
         drivetrain.setDefaultCommand(
@@ -141,31 +147,31 @@ public class RobotContainer {
         */    
         
         drivetrain.registerTelemetry(logger::telemeterize);
-
-        // Reset the field-centric heading on left bumper press.
-        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
             
-        // Assign Driver controls:
-        driver.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.shoot(33)));  // Max is 100
-        driver.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
+        // Assign Test controls:
+        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.shoot(100)));  // Max is 100
+        testController.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
 
-        driver.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(33)));    // Max is 100
-        driver.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
+        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(100)));    // Max is 100
+        testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
 
-        driver.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.runFeed(0.125)));
-        driver.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
+        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.runFeed(0.125)));
+        testController.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
 
-        driver.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.runFeed(0.125)));
-        driver.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
+        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.runFeed(0.125)));
+        testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+        // Assign Driver Controls:
+        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
+        //driver.rightTrigger().onTrue(); // Shoot
+        //driver.leftTrigger().onTrue(); // Aim / Spool Shooter
+        //driver.rightbumper().onTrue(); // Intake
+        //driver.leftbumper().onTrue(); // Intake REVERSE
         
-        //off toggles:
-        //driver.povRight().onTrue(s_shooter.runOnce(() -> s_shooter.shoot(0.0)));
-        //driver.povLeft().onTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
-        //driver.povDown().onTrue(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
-        //driver.povUp().onTrue(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
-        //Pivot:
-        //driver.a().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)));
-        //driver.y().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)));
+        // Assign Operator Controls:
+        // ...
     }
 
     public Command getAutonomousCommand() {

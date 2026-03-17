@@ -11,7 +11,7 @@ import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -23,15 +23,16 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 
-public class Shooter extends SubsystemBase {
-
+public class Shooter extends SubsystemBase 
+{
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120;   // 120
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;   // 60
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
     private static final double MM_CRUISE_RPS = 120;
     private static final double MM_ACCEL_RPS2 = 5;
 
-    private static final double SLOT0_KS = 0; // TODO - tune
+    private static final double SLOT0_KS = 0; // TODO - tune    // 0.26 according to Recalc
+    private static final double SLOT0_KA = 0; // TODO - tune    // 0.37 according to Recalc
     private static final double SLOT0_KV = 0.0; // TODO - tune
     private static final double SLOT0_KP = 1; // TODO - tune
     private static final double SLOT0_KI = 0.0; // TODO - tune
@@ -42,11 +43,12 @@ public class Shooter extends SubsystemBase {
 
     private double currentSpeedSetpointRps = 0.0;
 
-    //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
-        private final TalonFX left_shooter;
+    private final TalonFX left_shooter;
         private final TalonFX right_shooter;
         private final TalonFX left_middle_shooter;
         private final TalonFX right_middle_shooter;
+        private final VelocityTorqueCurrentFOC velocityRequest = new VelocityTorqueCurrentFOC(0);
+
     public Shooter() 
     {
         // declare all motors
@@ -68,13 +70,13 @@ public class Shooter extends SubsystemBase {
     
     public void shoot(double speedRPS) 
     {
-        left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
+        left_shooter.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
     }
 
     public void stopShooting() 
     {
-        left_shooter.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
+        left_shooter.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(0)));
         currentSpeedSetpointRps = 0.0;
     }
 
@@ -97,7 +99,9 @@ public class Shooter extends SubsystemBase {
     {
         return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Shooter.SPEED_TOLERANCE_RPS;
     }
-        private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
+
+    private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
+    {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
@@ -111,6 +115,7 @@ public class Shooter extends SubsystemBase {
                         .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2)))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT0_KS)
+                        .withKA(SLOT0_KA)
                         .withKV(SLOT0_KV)
                         .withKP(SLOT0_KP)
                         .withKI(SLOT0_KI)
@@ -125,16 +130,20 @@ public class Shooter extends SubsystemBase {
         StatusCode status = StatusCode.StatusCodeNotInitialized;
         for (int i = 0; i < Constants.CONFIG_RETRIES; ++i) {
             status = motor.getConfigurator().apply(shooterConfigs);
-            if (status.isOK()) {
+            if (status.isOK()) 
+            {
                 break;
             }
         }
 
-        if (!status.isOK()) {
+        if (!status.isOK()) 
+        {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
-    public void printDiagnostics() {
+    
+    public void printDiagnostics() 
+    {
         SmartDashboard.putNumber("Shooter Current Speed RPS", getSpeed());
         SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
         SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());
