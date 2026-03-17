@@ -28,7 +28,7 @@ public class Shooter extends SubsystemBase
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120;   // 120
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;   // 60
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
-    private static final double MM_CRUISE_RPS = 120;
+    private static final double MM_CRUISE_RPS = 100;
     private static final double MM_ACCEL_RPS2 = 5;
 
     private static final double SLOT0_KS = 0; // TODO - tune    // 0.26 according to Recalc
@@ -74,6 +74,12 @@ public class Shooter extends SubsystemBase
         currentSpeedSetpointRps = speedRPS;
     }
 
+    public void setShooterPercent(double percentOutput) 
+    {
+        double clamped = Math.max(-1.0, Math.min(1.0, percentOutput));
+        shoot(clamped * MM_CRUISE_RPS);
+    }
+
     public void stopShooting() 
     {
         left_shooter.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(0)));
@@ -98,6 +104,11 @@ public class Shooter extends SubsystemBase
     public boolean isAtSpeed() 
     {
         return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Shooter.SPEED_TOLERANCE_RPS;
+    }
+
+    public boolean isUpToSpeed()
+    {
+        return isAtSpeed();
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 

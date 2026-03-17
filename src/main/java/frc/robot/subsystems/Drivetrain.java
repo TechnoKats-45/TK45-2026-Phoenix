@@ -16,6 +16,7 @@ import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.numbers.N1;
@@ -311,9 +312,33 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
     private final SwerveRequest.ApplyRobotSpeeds m_pathApplyRobotSpeeds =
     new SwerveRequest.ApplyRobotSpeeds();
     private boolean m_autoBuilderConfigured = false;
+    private Rotation2d autoAimTargetHeading = Rotation2d.kZero;
+    private double autoAimToleranceDeg = 0.0;
+    private boolean autoAimActive = false;
 
     public boolean isAutoBuilderConfigured() {
         return m_autoBuilderConfigured;
+    }
+
+    public void setAutoAimTargetHeading(Rotation2d targetHeading, double toleranceDeg) {
+        autoAimTargetHeading = targetHeading;
+        autoAimToleranceDeg = toleranceDeg;
+        autoAimActive = true;
+    }
+
+    public void clearAutoAimTargetHeading() {
+        autoAimActive = false;
+        autoAimToleranceDeg = 0.0;
+    }
+
+    public boolean isRotAligned() {
+        if (!autoAimActive) {
+            return false;
+        }
+
+        double headingErrorDeg = Math.toDegrees(
+                MathUtil.angleModulus(autoAimTargetHeading.minus(getState().Pose.getRotation()).getRadians()));
+        return Math.abs(headingErrorDeg) <= autoAimToleranceDeg;
     }
     
     private void configureAutoBuilder() 

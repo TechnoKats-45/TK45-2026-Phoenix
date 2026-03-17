@@ -1,0 +1,192 @@
+package frc.robot.commands;
+
+import java.util.Optional;
+import java.util.function.DoubleSupplier;
+
+import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
+import com.ctre.phoenix6.swerve.SwerveRequest;
+
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.GenericHID;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import frc.robot.Constants;
+import frc.robot.FieldConstants;
+import frc.robot.subsystems.Drivetrain;
+import frc.robot.subsystems.Hood;
+import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.Vision;
+
+public class AutoAim extends Command 
+{
+        private final Drivetrain drivetrain;
+        private final Vision vision;
+        private final Hood hood;
+        private final Shooter shooter;
+        private final DoubleSupplier forwardSupplier;
+        private final DoubleSupplier strafeSupplier;
+        private final GenericHID rumbleController;
+        private final double maxSpeedMetersPerSecond;
+        private final double maxAngularRateRadiansPerSecond;
+        private final SwerveRequest.FieldCentric driveRequest = new SwerveRequest.FieldCentric()
+                .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+
+        public AutoAim(
+                Drivetrain drivetrain,
+                Vision vision,
+                Hood hood,
+                Shooter shooter,
+                DoubleSupplier forwardSupplier,
+                DoubleSupplier strafeSupplier,
+                GenericHID rumbleController,
+                double maxSpeedMetersPerSecond,
+                double maxAngularRateRadiansPerSecond) 
+                {
+                        this.drivetrain = drivetrain;
+                        this.vision = vision;
+                        this.hood = hood;
+                        this.shooter = shooter;
+                        this.forwardSupplier = forwardSupplier;
+                        this.strafeSupplier = strafeSupplier;
+                        this.rumbleController = rumbleController;
+                        this.maxSpeedMetersPerSecond = maxSpeedMetersPerSecond;
+                        this.maxAngularRateRadiansPerSecond = maxAngularRateRadiansPerSecond;
+
+                        addRequirements(drivetrain, hood, shooter);
+                }
+
+        @Override
+        public void initialize() 
+        {
+        }
+
+        @Override
+        public void execute() 
+        {
+                Optional<Alliance> alliance = DriverStation.getAlliance();
+                Alliance resolvedAlliance = alliance.orElse(Alliance.Blue);
+                Pose3d hubCenter = FieldConstants.Hub.getCenterForAlliance(Optional.of(resolvedAlliance));
+                boolean inPassingZone = FieldConstants.ShotZones.isInPassingZone(
+                        drivetrain.getState().Pose,
+                        Optional.of(resolvedAlliance));
+                Pose3d targetPose = inPassingZone
+                        ? FieldConstants.Passing.getClosestForAlliance(
+                                drivetrain.getState().Pose,
+                                Optional.of(resolvedAlliance))
+                        : hubCenter;
+
+                var rawHubObservation = vision.getHubObservation(Optional.of(resolvedAlliance));
+                boolean canUseHubVision = vision.hasConfiguredHubTagIds(Optional.of(resolvedAlliance));
+                Optional<Vision.HubObservation> hubObservation =
+                        !inPassingZone && canUseHubVision ? rawHubObservation : Optional.empty();
+
+                Translation2d robotToGoal = targetPose.toPose2d().getTranslation()
+                        .minus(drivetrain.getState().Pose.getTranslation());
+                Rotation2d desiredHeading = robotToGoal.getAngle().plus(Rotation2d.k180deg);
+                drivetrain.setAutoAimTargetHeading(
+                        desiredHeading,
+                        Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG);
+
+                double rangeMeters = hubObservation
+                                .map(Vision.HubObservation::rangeToHubCenterMeters)
+                                .orElseGet(() -> drivetrain.getState().Pose.getTranslation()
+                                        .getDistance(targetPose.toPose2d().getTranslation()));
+                double rangeInches = Units.metersToInches(rangeMeters);
+                var shotProfile = Constants.Shooter.getShotProfileForDistanceInches(rangeInches);
+
+                hood.setAngle(shotProfile.hoodDeg());
+                shooter.shoot(shotProfile.speedRps());
+
+                Rotation2d headingError = desiredHeading.minus(drivetrain.getState().Pose.getRotation());
+                double headingErrorRad = MathUtil.angleModulus(headingError.getRadians());
+                double headingErrorDeg = Math.toDegrees(headingErrorRad);
+                double toleranceRad = Math.toRadians(Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG);
+                double maxAutoAimRotationRate = Math.max(
+                        maxAngularRateRadiansPerSecond,
+                        Units.rotationsToRadians(Constants.Vision.AUTO_AIM_MAX_ANGULAR_RATE_RPS))
+                        * Constants.Vision.AUTO_AIM_MAX_ROTATION_RATE_SCALE;
+                double fullSpeedErrorRad = Math.toRadians(Constants.Vision.AUTO_AIM_FULL_SPEED_ERROR_DEG);
+
+                double rotationRate = 0.0;
+                if (Math.abs(headingErrorRad) > toleranceRad) {
+                        double errorMagnitudeRad = Math.abs(headingErrorRad);
+                        double commandedMagnitude;
+
+                        if (errorMagnitudeRad >= fullSpeedErrorRad) {
+                                commandedMagnitude = maxAutoAimRotationRate;
+                        } else {
+                                double rampFraction = MathUtil.clamp(
+                                        (errorMagnitudeRad - toleranceRad) / (fullSpeedErrorRad - toleranceRad),
+                                        0.0,
+                                        1.0);
+                                commandedMagnitude = MathUtil.interpolate(
+                                        Constants.Vision.AUTO_AIM_MIN_ROTATION_RATE_RAD_PER_SEC,
+                                        maxAutoAimRotationRate,
+                                        rampFraction);
+                        }
+
+                        rotationRate = Math.copySign(commandedMagnitude, headingErrorRad);
+                }
+
+                double forward = MathUtil.applyDeadband(
+                        -forwardSupplier.getAsDouble(),
+                        Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
+                double strafe = MathUtil.applyDeadband(
+                        -strafeSupplier.getAsDouble(),
+                        Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
+
+                drivetrain.setControl(
+                        driveRequest
+                                .withDeadband(maxSpeedMetersPerSecond * Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND)
+                                .withRotationalDeadband(0.0)
+                                .withVelocityX(forward * maxSpeedMetersPerSecond)
+                                .withVelocityY(strafe * maxSpeedMetersPerSecond)
+                                .withRotationalRate(rotationRate));
+
+                SmartDashboard.putString("AutoAim/Alliance", resolvedAlliance.name());
+                SmartDashboard.putString("AutoAim/Zone", inPassingZone ? "Passing" : "Scoring");
+                SmartDashboard.putBoolean("AutoAim/UsingVision", hubObservation.isPresent());
+                SmartDashboard.putBoolean("AutoAim/HubTagIdsConfigured", canUseHubVision);
+                SmartDashboard.putString("AutoAim/AimSource", hubObservation.map(Vision.HubObservation::source).orElse("pose"));
+                SmartDashboard.putNumber("AutoAim/TargetX", targetPose.getX());
+                SmartDashboard.putNumber("AutoAim/TargetY", targetPose.getY());
+                SmartDashboard.putNumber("AutoAim/RangeInches", rangeInches);
+                SmartDashboard.putNumber("AutoAim/DesiredHeadingDeg", desiredHeading.getDegrees());
+                SmartDashboard.putNumber("AutoAim/HeadingErrorDeg", headingErrorDeg);
+                SmartDashboard.putNumber("AutoAim/HoodDeg", shotProfile.hoodDeg());
+                SmartDashboard.putNumber("AutoAim/ShooterRps", shotProfile.speedRps());
+                SmartDashboard.putNumber("AutoAim/RotationRateCmdRadPerSec", rotationRate);
+                SmartDashboard.putBoolean(
+                        "AutoAim/RotationAligned",
+                        drivetrain.isRotAligned());
+
+                boolean readyToShoot = drivetrain.isRotAligned()
+                        && hood.isAligned()
+                        && shooter.isUpToSpeed();
+                rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, readyToShoot ? 1.0 : 0.0);
+        }
+
+        @Override
+        public void end(boolean interrupted) 
+        {
+                drivetrain.clearAutoAimTargetHeading();
+                rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
+                drivetrain.setControl(
+                        driveRequest
+                                .withVelocityX(0.0 * maxSpeedMetersPerSecond)
+                                .withVelocityY(0.0 * maxSpeedMetersPerSecond)
+                                .withRotationalRate(0.0 * maxAngularRateRadiansPerSecond));
+        }
+
+        @Override
+        public boolean isFinished() 
+        {
+                return false;
+        }
+}

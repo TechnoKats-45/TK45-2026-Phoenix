@@ -3,10 +3,10 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import java.util.TreeMap;
 
-public class Constants {
+public class Constants 
+{
     
     public static final int CONFIG_RETRIES = 3;
 
@@ -68,28 +68,62 @@ public class Constants {
     public class Shooter 
     {
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+
+        public record ShotProfile(double hoodDeg, double speedRps) {}
+
+        public static final TreeMap<Double, ShotProfile> DISTANCE_ANGLE_SPEED = new TreeMap<>();
+        static {
+            DISTANCE_ANGLE_SPEED.put(70.0, new ShotProfile(0.0, 0.0));
+            DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(0.0, 0.0));
+            DISTANCE_ANGLE_SPEED.put(150.0, new ShotProfile(0.0, 0.0));
+            DISTANCE_ANGLE_SPEED.put(215.0, new ShotProfile(0.0, 0.0));
+        }
+
+        public static ShotProfile getShotProfileForDistanceInches(double distanceInches) {
+            if (DISTANCE_ANGLE_SPEED.isEmpty()) {
+                return new ShotProfile(0.0, 0.0);
+            }
+
+            var lower = DISTANCE_ANGLE_SPEED.floorEntry(distanceInches);
+            var upper = DISTANCE_ANGLE_SPEED.ceilingEntry(distanceInches);
+
+            if (lower == null) {
+                return upper.getValue();
+            }
+            if (upper == null) {
+                return lower.getValue();
+            }
+            if (lower.getKey().equals(upper.getKey())) {
+                return lower.getValue();
+            }
+
+            double ratio = (distanceInches - lower.getKey()) / (upper.getKey() - lower.getKey());
+            double hoodDeg = lower.getValue().hoodDeg()
+                    + ratio * (upper.getValue().hoodDeg() - lower.getValue().hoodDeg());
+            double speedRps = lower.getValue().speedRps()
+                    + ratio * (upper.getValue().speedRps() - lower.getValue().speedRps());
+            return new ShotProfile(hoodDeg, speedRps);
+        }
     }
 
     public class Hood 
     {
-    
         public static final double ROTATE_SPEED = 0.5; // TODO - TUNE
         public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
         public static final double HOOD_ANGLE_DOWN = 0.0;
         public static final double HOOD_ANGLE_UP_STOWED = 9; // TODO - tune
     }
     
-
     public class Floor 
     {
-        public static final double FLOOR_SPEED = 0.5; // TODO - TUNE
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+        public static final double ShootSpeed = .5; // TODO - TUNE
     }
-    
     
     public class Feeder 
     {
-            public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+        public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+        public static final double ShootSpeed = 0.5; // TODO - TUNE
     }
 
     public class Vision
@@ -97,6 +131,23 @@ public class Constants {
         // Match these exactly to PhotonVision camera names on the coprocessor.
         public static final String LEFT_CAMERA_NAME = "Photon_Left";
         public static final String RIGHT_CAMERA_NAME = "Photon_Right";
+
+        // While these remain non-positive, AutoAim will use any visible fiducial target
+        // from the front shooter cameras before falling back to pose-only aiming.
+        public static final int[] BLUE_HUB_FRONT_TAG_IDS = {25,26};
+        public static final int[] RED_HUB_FRONT_TAG_IDS = {9,10};
+
+        public static final double AUTO_AIM_ROTATION_KP = .1;
+        public static final double AUTO_AIM_ROTATION_KI = 0.0;
+        public static final double AUTO_AIM_ROTATION_KD = 0.2;
+        public static final double AUTO_AIM_TRANSLATION_DEADBAND = 0.1;
+
+        public static final double AUTO_AIM_ROTATION_TOLERANCE_DEG = 2.0;
+        public static final double AUTO_AIM_MAX_ROTATION_RATE_SCALE = .75;
+        public static final double AUTO_AIM_MAX_ANGULAR_RATE_RPS = 1.5;
+
+        public static final double AUTO_AIM_FULL_SPEED_ERROR_DEG = 12.0;
+        public static final double AUTO_AIM_MIN_ROTATION_RATE_RAD_PER_SEC = 0.35;
 
         // Robot-to-camera transforms using measured offsets from robot center.
         // Input measurements were inches; converted here to meters.

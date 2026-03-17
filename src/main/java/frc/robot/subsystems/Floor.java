@@ -35,15 +35,15 @@ public class Floor extends SubsystemBase
     private static final double SENSOR_TO_MECHANISM_RATIO = 2.0; //TODO TUNE
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
-    private static final double MAX_FLOOR_SPEED_RPS = 400.0; // TODO TUNE
+    private static final double MAX_FLOOR_SPEED_RPS = 100.0; // 100 is max rps for Kraken X60
     private double currentSpeedSetpointRps = 0.0;
 
     // PID
-    private static final double SLOT0_KS = 0.0; // TODO TUNE
-    private static final double SLOT0_KV = 0.0; // TODO TUNE
-    private static final double SLOT0_KP = 1.0; // TODO TUNE
-    private static final double SLOT0_KI = 0.0; // TODO TUNE
-    private static final double SLOT0_KD = 0.0; // TODO TUNE
+    private static final double SLOT0_KS = 0; // TODO TUNE
+    private static final double SLOT0_KV = 0; // TODO TUNE
+    private static final double SLOT0_KP = 1; // TODO TUNE
+    private static final double SLOT0_KI = 0; // TODO TUNE
+    private static final double SLOT0_KD = 0; // TODO TUNE
     
     // Spin Directions
     private static final InvertedValue LEFT_MOTOR_INVERTED = InvertedValue.Clockwise_Positive;
@@ -71,7 +71,7 @@ public Floor()
     }
 
     
-    public void runFeed(double percentOutput) 
+    public void setFloorPercent(double percentOutput) 
     {
         double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
         setSpeed(clamped * MAX_FLOOR_SPEED_RPS);
@@ -81,7 +81,6 @@ public Floor()
     {
         return (left_motor.getVelocity().getValueAsDouble() + right_motor.getVelocity().getValueAsDouble()) / 2.0 ; 
     }
-
 
     public boolean isAtSpeed(double toleranceRps) 
     {
@@ -94,14 +93,9 @@ public Floor()
         left_motor.stopMotor();
         SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
     }
-    
-    public void setDumbSpeed(double percent) 
+
+    private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
     {
-        runFeed(percent);
-    }
-
-
-private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
         TalonFXConfiguration floorConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
@@ -127,16 +121,25 @@ private void configureMotor(TalonFX motor, InvertedValue invertedValue, String m
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
-        for (int i = 0; i < CONFIG_RETRIES; ++i) {
+        for (int i = 0; i < CONFIG_RETRIES; ++i) 
+        {
             status = motor.getConfigurator().apply(floorConfigs);
-            if (status.isOK()) {
+            if (status.isOK()) 
+            {
                 break;
             }
         }
 
-        if (!status.isOK()) {
+        if (!status.isOK()) 
+        {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
+    }
+
+    public void printDiagnostics()
+    {
+        SmartDashboard.putNumber("Floor Current Speed RPS", getSpeed());
+        SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
 }

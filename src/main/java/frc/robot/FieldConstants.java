@@ -54,11 +54,19 @@ public class FieldConstants {
                 BLUE_FRONT_FACE.getZ(),
                 Rotation3d.kZero);
 
+        public static final double FRONT_FACE_TO_CENTER_XY_METERS = BLUE_CENTER.toPose2d()
+                .getTranslation()
+                .getDistance(BLUE_FRONT_FACE.toPose2d().getTranslation());
+
         // Backward-compatibility alias for existing callsites.
         public static final Pose3d CENTER = BLUE_CENTER;
 
         public static Pose3d getCenterForAlliance(Optional<Alliance> alliance) {
             return alliance.orElse(Alliance.Blue) == Alliance.Red ? RED_CENTER : BLUE_CENTER;
+        }
+
+        public static Pose3d getFrontFaceForAlliance(Optional<Alliance> alliance) {
+            return alliance.orElse(Alliance.Blue) == Alliance.Red ? RED_FRONT_FACE : BLUE_FRONT_FACE;
         }
 
         public static Pose3d getCenterForAllianceOrNearest(Optional<Alliance> alliance, Pose2d robotPose) {
@@ -72,28 +80,31 @@ public class FieldConstants {
     }
 
     public static final class Passing {
-        private static final double LATERAL_OFFSET_METERS = Units.feetToMeters(10);
+        private static final double BLUE_PASSING_X = Hub.BLUE_CENTER.getX() / 2.0;
+        private static final double RED_PASSING_X = (FIELD_LENGTH + Hub.RED_CENTER.getX()) / 2.0;
+        private static final double LOWER_PASSING_Y = Hub.BLUE_CENTER.getY() / 2.0;
+        private static final double UPPER_PASSING_Y = (FIELD_WIDTH + Hub.BLUE_CENTER.getY()) / 2.0;
 
         public static final Pose3d BLUE_LEFT_TARGET = new Pose3d(
-                Hub.BLUE_CENTER.getX(),
-                Hub.BLUE_CENTER.getY() + LATERAL_OFFSET_METERS,
+                BLUE_PASSING_X,
+                UPPER_PASSING_Y,
                 Hub.BLUE_CENTER.getZ(),
                 Rotation3d.kZero);
         public static final Pose3d BLUE_RIGHT_TARGET = new Pose3d(
-                Hub.BLUE_CENTER.getX(),
-                Hub.BLUE_CENTER.getY() - LATERAL_OFFSET_METERS,
+                BLUE_PASSING_X,
+                LOWER_PASSING_Y,
                 Hub.BLUE_CENTER.getZ(),
                 Rotation3d.kZero);
 
         public static final Pose3d RED_LEFT_TARGET = new Pose3d(
-                FIELD_LENGTH - BLUE_LEFT_TARGET.getX(),
-                FIELD_WIDTH - BLUE_LEFT_TARGET.getY(),
-                BLUE_LEFT_TARGET.getZ(),
+                RED_PASSING_X,
+                UPPER_PASSING_Y,
+                Hub.RED_CENTER.getZ(),
                 Rotation3d.kZero);
         public static final Pose3d RED_RIGHT_TARGET = new Pose3d(
-                FIELD_LENGTH - BLUE_RIGHT_TARGET.getX(),
-                FIELD_WIDTH - BLUE_RIGHT_TARGET.getY(),
-                BLUE_RIGHT_TARGET.getZ(),
+                RED_PASSING_X,
+                LOWER_PASSING_Y,
+                Hub.RED_CENTER.getZ(),
                 Rotation3d.kZero);
 
         private static final Pose3d[] BLUE_TARGETS = new Pose3d[] { BLUE_LEFT_TARGET, BLUE_RIGHT_TARGET };

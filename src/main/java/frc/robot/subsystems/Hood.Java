@@ -9,16 +9,12 @@ import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -50,7 +46,7 @@ public class Hood extends SubsystemBase
 
     public Hood() 
     {
-        hood_motor = new TalonFX(Constants.CAN_ID.Hood,Constants.CAN_BUS.CANIVORE);
+        hood_motor = new TalonFX(Constants.CAN_ID.HOOD, Constants.CAN_BUS.CANIVORE);
         configureMotor(hood_motor, HOOD_MOTOR_INVERTED, "Hood Motor");
     }
 
@@ -96,7 +92,7 @@ public class Hood extends SubsystemBase
                         .withKD(SLOT0_KD));
 
         floorConfigs.MotorOutput.Inverted = invertedValue;
-        floorConfigs.MotorOutput.NeutralMode = NeutralModeValue.brake;
+        floorConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         floorConfigs.Voltage
                 .withPeakForwardVoltage(Volts.of(PEAK_FORWARD_VOLTS))
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));

@@ -3,6 +3,7 @@ package frc.robot;
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
 
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -54,6 +55,14 @@ public class Telemetry {
     /* Robot pose for field positioning */
     private final NetworkTable table = inst.getTable("Pose");
     private final DoubleArrayPublisher fieldPub = table.getDoubleArrayTopic("robotPose").publish();
+    private final DoubleArrayPublisher blueHubPub = table.getDoubleArrayTopic("blueHub").publish();
+    private final DoubleArrayPublisher redHubPub = table.getDoubleArrayTopic("redHub").publish();
+    private final DoubleArrayPublisher bluePassingTargetsPub = table.getDoubleArrayTopic("bluePassingTargets").publish();
+    private final DoubleArrayPublisher redPassingTargetsPub = table.getDoubleArrayTopic("redPassingTargets").publish();
+    private final DoubleArrayPublisher blueScoringZonePub = table.getDoubleArrayTopic("blueScoringZone").publish();
+    private final DoubleArrayPublisher bluePassingZonePub = table.getDoubleArrayTopic("bluePassingZone").publish();
+    private final DoubleArrayPublisher redScoringZonePub = table.getDoubleArrayTopic("redScoringZone").publish();
+    private final DoubleArrayPublisher redPassingZonePub = table.getDoubleArrayTopic("redPassingZone").publish();
     private final StringPublisher fieldTypePub = table.getStringTopic(".type").publish();
 
     /* Mechanisms to represent the swerve module states */
@@ -83,6 +92,48 @@ public class Telemetry {
     };
 
     private final double[] m_poseArray = new double[3];
+    private final double[] m_blueHubArray = posesToFieldObjectArray(FieldConstants.Hub.BLUE_CENTER);
+    private final double[] m_redHubArray = posesToFieldObjectArray(FieldConstants.Hub.RED_CENTER);
+    private final double[] m_bluePassingTargetsArray = posesToFieldObjectArray(
+            FieldConstants.Passing.BLUE_LEFT_TARGET,
+            FieldConstants.Passing.BLUE_RIGHT_TARGET);
+    private final double[] m_redPassingTargetsArray = posesToFieldObjectArray(
+            FieldConstants.Passing.RED_LEFT_TARGET,
+            FieldConstants.Passing.RED_RIGHT_TARGET);
+    private final double[] m_blueScoringZoneArray = posesToFieldObjectArray(
+            new Pose3d(0.0, 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.BLUE_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.BLUE_CENTER.getX(), FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(0.0, FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(0.0, 0.0, 0.0, Pose3d.kZero.getRotation()));
+    private final double[] m_bluePassingZoneArray = posesToFieldObjectArray(
+            new Pose3d(FieldConstants.Hub.BLUE_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.FIELD_LENGTH, 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.FIELD_LENGTH, FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.BLUE_CENTER.getX(), FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.BLUE_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()));
+    private final double[] m_redPassingZoneArray = posesToFieldObjectArray(
+            new Pose3d(0.0, 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(0.0, FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(0.0, 0.0, 0.0, Pose3d.kZero.getRotation()));
+    private final double[] m_redScoringZoneArray = posesToFieldObjectArray(
+            new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.FIELD_LENGTH, 0.0, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.FIELD_LENGTH, FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
+            new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()));
+
+    private static double[] posesToFieldObjectArray(Pose3d... poses) {
+        double[] packed = new double[poses.length * 3];
+        for (int i = 0; i < poses.length; i++) {
+            packed[i * 3] = poses[i].getX();
+            packed[i * 3 + 1] = poses[i].getY();
+            packed[i * 3 + 2] = poses[i].getRotation().toRotation2d().getDegrees();
+        }
+        return packed;
+    }
 
     /** Accept the swerve drive state and telemeterize it to SmartDashboard and SignalLogger. */
     public void telemeterize(SwerveDriveState state) {
@@ -110,6 +161,14 @@ public class Telemetry {
         m_poseArray[1] = state.Pose.getY();
         m_poseArray[2] = state.Pose.getRotation().getDegrees();
         fieldPub.set(m_poseArray);
+        blueHubPub.set(m_blueHubArray);
+        redHubPub.set(m_redHubArray);
+        bluePassingTargetsPub.set(m_bluePassingTargetsArray);
+        redPassingTargetsPub.set(m_redPassingTargetsArray);
+        blueScoringZonePub.set(m_blueScoringZoneArray);
+        bluePassingZonePub.set(m_bluePassingZoneArray);
+        redScoringZonePub.set(m_redScoringZoneArray);
+        redPassingZonePub.set(m_redPassingZoneArray);
 
         /* Telemeterize each module state to a Mechanism2d */
         for (int i = 0; i < 4; ++i) {

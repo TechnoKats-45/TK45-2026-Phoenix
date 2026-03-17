@@ -11,32 +11,31 @@ import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
-
-public class Feeder extends SubsystemBase {
-
+public class Feeder extends SubsystemBase 
+{
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
     private static final double MM_CRUISE_RPS = 120;
     private static final double MM_ACCEL_RPS2 = 5;
-
+    private static final double MAX_FEEDER_SPEED_RPS = 100.0; // 100 is max rps for Kraken X60
     private static final double SLOT0_KS = 0; // TODO - tune
-    private static final double SLOT0_KV = 0.0; // TODO - tune
-    private static final double SLOT0_KP = .1; // TODO - tune
-    private static final double SLOT0_KI = 0.0; // TODO - tune
-    private static final double SLOT0_KD = 0.0; // TODO - tune
+    private static final double SLOT0_KV = 0; // TODO - tune
+    private static final double SLOT0_KP = 1; // TODO - tune
+    private static final double SLOT0_KI = 0; // TODO - tune
+    private static final double SLOT0_KD = 0; // TODO - tune
 
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
@@ -44,8 +43,10 @@ public class Feeder extends SubsystemBase {
     private double currentSpeedSetpointRps = 0.0;
 
     //private static final double MAX_ELEVATOR_SPEED_RPS = Constants.Shooter.MAX_ELEVATOR_SPEED_RPS;
-        private final TalonFX left_feeder;
-        private final TalonFX right_feeder;
+    private final TalonFX left_feeder;
+    private final TalonFX right_feeder;
+    private final VelocityTorqueCurrentFOC velocityRequest = new VelocityTorqueCurrentFOC(0);
+    
     public Feeder() 
     {
         left_feeder = new TalonFX(Constants.CAN_ID.LEFT_FEEDER, Constants.CAN_BUS.CANIVORE);
@@ -57,17 +58,16 @@ public class Feeder extends SubsystemBase {
         // Initialize feeder-specific components here
     }
 
-    // Make this based off percent?
     public void setFeederSpeed(double speedRPS) 
     {
-        left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(speedRPS)));
+        left_feeder.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
     }
 
-    public void stopFeeding() 
+    public void setFeederPercent(double percentOutput) 
     {
-        left_feeder.setControl(new VelocityVoltage(RotationsPerSecond.of(0)));
-        currentSpeedSetpointRps = 0.0;
+        double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
+        setFeederSpeed(clamped * MAX_FEEDER_SPEED_RPS);
     }
 
     public double getSpeed() 
@@ -87,7 +87,8 @@ public class Feeder extends SubsystemBase {
         right_feeder.set(0);
     }   
 
-    private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
+    private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
+    {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
@@ -113,14 +114,17 @@ public class Feeder extends SubsystemBase {
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
-        for (int i = 0; i < Constants.CONFIG_RETRIES; ++i) {
+        for (int i = 0; i < Constants.CONFIG_RETRIES; ++i) 
+        {
             status = motor.getConfigurator().apply(shooterConfigs);
-            if (status.isOK()) {
+            if (status.isOK()) 
+            {
                 break;
             }
         }
 
-        if (!status.isOK()) {
+        if (!status.isOK()) 
+        {
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }

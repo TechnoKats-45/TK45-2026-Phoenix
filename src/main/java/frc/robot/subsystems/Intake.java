@@ -140,7 +140,7 @@ public class Intake extends SubsystemBase
     }
 
     
-    public void runFeed(double percentOutput) 
+    public void setIntakePercent(double percentOutput) 
     {
         double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
         setSpeed(clamped * MAX_INTAKE_SPEED_RPS);
@@ -150,7 +150,6 @@ public class Intake extends SubsystemBase
     {
         return (intake_left_roller_motor.getVelocity().getValueAsDouble() + intake_right_roller_motor.getVelocity().getValueAsDouble()) / 2.0 ; 
     }
-
 
     public boolean isAtSpeed(double toleranceRps) 
     {

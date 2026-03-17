@@ -20,12 +20,16 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import frc.robot.commands.AutoAim;
 import frc.robot.subsystems.Feeder;
 import frc.robot.subsystems.Floor;
+import frc.robot.subsystems.Hood;
 import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Shooter;
+import frc.robot.subsystems.Vision;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.Drivetrain;
+import frc.robot.Constants;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
@@ -50,9 +54,11 @@ public class RobotContainer {
     public final Drivetrain drivetrain = TunerConstants.createDrivetrain();
 
     private final Intake s_intake = new Intake();
+    private final Hood s_hood = new Hood();
     private final Shooter s_shooter = new Shooter();
     private final Feeder s_feeder = new Feeder();
     private final Floor s_floor = new Floor();
+    private final Vision s_vision = new Vision(drivetrain);
 
     public RobotContainer() 
     {
@@ -70,7 +76,7 @@ public class RobotContainer {
             ),
             new WaitCommand(1.5),
             Commands.runOnce(() -> 
-                s_intake.runFeed(Constants.Intake.INTAKE_SPEED)
+                s_intake.setIntakePercent(Constants.Intake.INTAKE_SPEED)
             )
             )
         );
@@ -79,7 +85,7 @@ public class RobotContainer {
         "StowAndIntake",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
-            s_intake.runFeed(0)
+            s_intake.setIntakePercent(0)
             ),
             new WaitCommand(0.2),
             Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)
@@ -91,7 +97,7 @@ public class RobotContainer {
         "DumpHopper",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
-            s_floor.runFeed(50)
+            s_floor.setFloorPercent(.5)
             ),
             Commands.runOnce(() -> s_feeder.setFeederSpeed(50)),
             new WaitCommand(1), 
@@ -103,7 +109,7 @@ public class RobotContainer {
         "StopHopperDump",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
-            s_floor.runFeed(0)
+            s_floor.setSpeed(0)
             ),
             Commands.runOnce(() -> s_feeder.setFeederSpeed(0)),
             new WaitCommand(1), 
@@ -132,11 +138,6 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
 
-        driver.a().whileTrue(drivetrain.applyRequest(() -> brake));
-        driver.b().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-driver.getLeftY(), -driver.getLeftX()))
-        ));
-
         // Run SysId routines when holding back/start and X/Y.
         // Note that each routine should be run exactly once in a single log.
         /*
@@ -149,26 +150,43 @@ public class RobotContainer {
         drivetrain.registerTelemetry(logger::telemeterize);
             
         // Assign Test controls:
-        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.shoot(100)));  // Max is 100
+        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.setShooterPercent(1)));  // Max is 100
         testController.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
 
-        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(100)));    // Max is 100
-        testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
+        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(1)));    // Max is 100
+        testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.stop()));
 
-        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.runFeed(0.125)));
-        testController.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
+        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.setFloorPercent(0.5)));
+        testController.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.stop()));
 
-        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.runFeed(0.125)));
-        testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
+        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.setIntakePercent(1)));
+        testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.stop()));
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
-        //driver.rightTrigger().onTrue(); // Shoot
-        //driver.leftTrigger().onTrue(); // Aim / Spool Shooter
-        //driver.rightbumper().onTrue(); // Intake
-        //driver.leftbumper().onTrue(); // Intake REVERSE
+        driver.leftTrigger().whileTrue(new AutoAim(
+            drivetrain,
+            s_vision,
+            s_hood,
+            s_shooter,
+            driver::getLeftY,
+            driver::getLeftX,
+            driver.getHID(),
+            MaxSpeed,
+            MaxAngularRate
+        ));
+        
+        driver.rightTrigger().whileTrue(new ParallelCommandGroup
+            (
+                Commands.runOnce(() -> s_floor.setFloorPercent(Constants.Floor.ShootSpeed)),
+                Commands.runOnce(() -> s_feeder.setFeederSpeed(Constants.Feeder.ShootSpeed))
+            )
+        );
+
+        driver.rightBumper().onTrue(/*/ toggle autointake*/);
+        driver.leftBumper().whileTrue(/*/ reverse intake, floor, and feeder for unjam */);
         
         // Assign Operator Controls:
         // ...
