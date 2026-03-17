@@ -140,6 +140,11 @@ public Floor()
     {
         SmartDashboard.putNumber("Floor Current Speed RPS", getSpeed());
         SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
+        SmartDashboard.putBoolean("Floor Is At Speed", isAtSpeed(Constants.Floor.SPEED_TOLERANCE_RPS));
+        SmartDashboard.putNumber(
+                "Floor Current Draw Amps",
+                (left_motor.getSupplyCurrent().getValueAsDouble()
+                        + right_motor.getSupplyCurrent().getValueAsDouble()) / 2.0);
     }
 
 }

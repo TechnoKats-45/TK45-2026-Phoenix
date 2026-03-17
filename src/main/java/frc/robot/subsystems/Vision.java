@@ -19,6 +19,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
@@ -83,6 +85,23 @@ public class Vision extends SubsystemBase {
     public void periodic() {
         processCamera(leftCamera, leftEstimator, "Left");
         processCamera(rightCamera, rightEstimator, "Right");
+
+        Optional<Alliance> alliance = DriverStation.getAlliance();
+        Pose3d hubCenter = FieldConstants.Hub.getCenterForAllianceOrNearest(alliance, drivetrain.getState().Pose);
+        double poseDistanceMeters = drivetrain.getState().Pose.getTranslation()
+                .getDistance(hubCenter.toPose2d().getTranslation());
+        Optional<HubObservation> hubObservation = getHubObservation(alliance);
+
+        SmartDashboard.putString("Vision/Alliance", alliance.map(Enum::name).orElse("Unknown"));
+        SmartDashboard.putNumber("Vision/TargetDistanceMeters", poseDistanceMeters);
+        SmartDashboard.putNumber("Vision/TargetDistanceInches", Units.metersToInches(poseDistanceMeters));
+        SmartDashboard.putBoolean("Vision/HasObservedTargetDistance", hubObservation.isPresent());
+        SmartDashboard.putNumber(
+                "Vision/ObservedTargetDistanceMeters",
+                hubObservation.map(HubObservation::rangeToHubCenterMeters).orElse(-1.0));
+        SmartDashboard.putNumber(
+                "Vision/ObservedTargetDistanceInches",
+                hubObservation.map(obs -> Units.metersToInches(obs.rangeToHubCenterMeters())).orElse(-1.0));
     }
 
     public Optional<HubObservation> getHubObservation(Optional<Alliance> alliance) {

@@ -50,8 +50,6 @@ public class Intake extends SubsystemBase
     private static final InvertedValue RIGHT_PIVOT_INVERTED = InvertedValue.Clockwise_Positive;
     private static final MotorAlignmentValue RIGHT_FOLLOW_PIVOT_ALIGNMENT = MotorAlignmentValue.Opposed;
 
-
-
     //Roller Vars
     private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 60.0;

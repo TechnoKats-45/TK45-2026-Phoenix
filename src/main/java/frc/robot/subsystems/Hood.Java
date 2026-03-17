@@ -109,4 +109,12 @@ public class Hood extends SubsystemBase
             System.out.println("Could not apply configs for " + motorName + ", error code: " + status);
         }
     }
+
+    public void printDiagnostics()
+    {
+        SmartDashboard.putNumber("Hood Angle", getAngle());
+        SmartDashboard.putNumber("Hood Set Point", currentAngleSetPoint);
+        SmartDashboard.putBoolean("Hood Is At Angle", isAligned());
+        SmartDashboard.putNumber("Hood Current Draw Amps", hood_motor.getSupplyCurrent().getValueAsDouble());
+    }
 }

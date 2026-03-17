@@ -10,32 +10,33 @@ import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
-import edu.wpi.first.wpilibj2.command.ParallelDeadlineGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+
 import frc.robot.commands.AutoAim;
 import frc.robot.commands.AutoIntake;
-import frc.robot.subsystems.Feeder;
-import frc.robot.subsystems.Floor;
-import frc.robot.subsystems.Hood;
-import frc.robot.subsystems.Intake;
-import frc.robot.subsystems.Shooter;
-import frc.robot.subsystems.Vision;
+
+import frc.robot.subsystems.*;
+
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.Drivetrain;
-import frc.robot.Constants;
 
 import com.pathplanner.lib.auto.NamedCommands;
 
 public class RobotContainer 
 {
+    private static final String MANUAL_SHOOTER_ENABLE_KEY = "Tuning/Manual Shooter Mode";
+    private static final String MANUAL_SHOOTER_SPEED_KEY = "Tuning/Manual Shooter RPS";
+    private static final String MANUAL_HOOD_ANGLE_KEY = "Tuning/Manual Hood Angle";
+    private static final String MANUAL_SHOOTER_MAX_KEY = "Tuning/Manual Shooter Max RPS";
+    private static final String MANUAL_HOOD_MAX_KEY = "Tuning/Manual Hood Max Angle";
+
     // Declare and instantiate variables:
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
@@ -44,8 +45,6 @@ public class RobotContainer
     private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
-    private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
@@ -64,8 +63,44 @@ public class RobotContainer
 
     public RobotContainer() 
     {
+        initializeTuningDashboard();
         registerNamedCommands();
         configureBindings();
+    }
+
+    private void initializeTuningDashboard()
+    {
+        SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
+        SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
+        SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, 0.0);
+        SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
+        SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
+    }
+
+    public void periodic()
+    {
+        if (!SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false)) 
+        {
+            return;
+        }
+
+        double shooterMax = SmartDashboard.getNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
+        double hoodMax = SmartDashboard.getNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
+
+        double shooterRps = MathUtil.clamp(
+            SmartDashboard.getNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0),
+            0.0,
+            shooterMax);
+        double hoodAngle = MathUtil.clamp(
+            SmartDashboard.getNumber(MANUAL_HOOD_ANGLE_KEY, 0.0),
+            0.0,
+            hoodMax);
+
+        s_shooter.shoot(shooterRps);
+        s_hood.setAngle(hoodAngle);
+
+        SmartDashboard.putNumber("Tuning/Applied Shooter RPS", shooterRps);
+        SmartDashboard.putNumber("Tuning/Applied Hood Angle", hoodAngle);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,18 +128,17 @@ public class RobotContainer
         drivetrain.registerTelemetry(logger::telemeterize);
             
         // Assign Test controls:
-        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.setShooterPercent(1)));  // Max is 100
+        testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.setShooterPercent(1)));    // Max is 1
         testController.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
 
-        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(1)));    // Max is 100
+        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(1)));               // Max is 1
         testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.stop()));
 
-        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.setFloorPercent(0.5)));
+        testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.setFloorPercent(0.5)));        // Max is 1
         testController.leftTrigger().onFalse(s_floor.runOnce(() -> s_floor.stop()));
 
-        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.setIntakePercent(1)));
+        testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.setIntakePercent(1)));      // Max is 1
         testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.stop()));
-
 
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
@@ -225,9 +259,15 @@ public class RobotContainer
             Commands.runOnce(() -> s_shooter.shoot(0))
             )
         );
-
-
-        //////////////////////////////////////////////////////////////////////////////////////////////////
-        // TODO - JON
+    }
+    
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    public void printDiagnostics()
+    {
+        s_shooter.printDiagnostics();
+        s_hood.printDiagnostics();
+        s_intake.printDiagnostics();
+        s_feeder.printDiagnostics();
+        s_floor.printDiagnostics();
     }
 }

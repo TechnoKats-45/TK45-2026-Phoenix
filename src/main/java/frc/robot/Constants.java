@@ -68,6 +68,7 @@ public class Constants
 
     public class Shooter 
     {
+        public static final double MAX_SPEED_RPS = 100.0; // TODO - TUNE
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
 
         public record ShotProfile(double hoodDeg, double speedRps) {}
@@ -113,6 +114,7 @@ public class Constants
         public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
         public static final double HOOD_ANGLE_DOWN = 0.0;
         public static final double HOOD_ANGLE_UP_STOWED = 9; // TODO - tune
+        public static final double MAX_ANGLE = HOOD_ANGLE_UP_STOWED;
     }
     
     public class Floor 

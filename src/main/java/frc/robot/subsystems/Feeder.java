@@ -131,10 +131,10 @@ public class Feeder extends SubsystemBase
 
     public void printDiagnostics() 
     {
-        SmartDashboard.putNumber("Shooter Current Speed RPS", getSpeed());
-        SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
-        SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());
-        SmartDashboard.putNumber("Shooter Current", (left_feeder.getSupplyCurrent().getValueAsDouble()
+        SmartDashboard.putNumber("Feeder Current Speed RPS", getSpeed());
+        SmartDashboard.putNumber("Feeder Speed Setpoint RPS", currentSpeedSetpointRps);
+        SmartDashboard.putBoolean("Feeder Is At Speed", isAtSpeed());
+        SmartDashboard.putNumber("Feeder Current", (left_feeder.getSupplyCurrent().getValueAsDouble()
             + right_feeder.getSupplyCurrent().getValueAsDouble())/2.0);
     }
     
