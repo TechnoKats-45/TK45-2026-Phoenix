@@ -225,7 +225,7 @@ public class RobotContainer
         );
 
         NamedCommands.registerCommand(
-        "StowAndIntake",
+        "StowAndStopIntake",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
             s_intake.setIntakePercent(0)
