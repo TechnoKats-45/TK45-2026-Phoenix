@@ -31,7 +31,6 @@ import com.pathplanner.lib.auto.NamedCommands;
 
 public class RobotContainer {
     // Declare and instantiate variables:
-    private final CommandXboxController driver = new CommandXboxController(0);
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
 
@@ -44,7 +43,7 @@ public class RobotContainer {
 
     private final Telemetry logger = new Telemetry(MaxSpeed);
 
-    private final CommandXboxController joystick = new CommandXboxController(0);
+    private final CommandXboxController driver = new CommandXboxController(0);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
@@ -85,7 +84,7 @@ public class RobotContainer {
     )
 );
     NamedCommands.registerCommand(
-    "Dump Hopper",
+    "DumpHopper",
     new SequentialCommandGroup(
         Commands.runOnce(() -> 
         s_floor.runFeed(50)
@@ -96,7 +95,7 @@ public class RobotContainer {
         )
     );
     NamedCommands.registerCommand(
-    "stop hopper dump",
+    "StopHopperDump",
     new SequentialCommandGroup(
         Commands.runOnce(() -> 
         s_floor.runFeed(0)
@@ -114,9 +113,9 @@ public class RobotContainer {
         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(-joystick.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-joystick.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-joystick.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+                drive.withVelocityX(-driver.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(-driver.getLeftX() * MaxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(-driver.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
 
@@ -127,22 +126,35 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle).ignoringDisable(true)
         );
 
-        joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
-        joystick.b().whileTrue(drivetrain.applyRequest(() ->
-            point.withModuleDirection(new Rotation2d(-joystick.getLeftY(), -joystick.getLeftX()))
+        driver.a().whileTrue(drivetrain.applyRequest(() -> brake));
+        driver.b().whileTrue(drivetrain.applyRequest(() ->
+            point.withModuleDirection(new Rotation2d(-driver.getLeftY(), -driver.getLeftX()))
         ));
 
         // Run SysId routines when holding back/start and X/Y.
         // Note that each routine should be run exactly once in a single log.
-        joystick.back().and(joystick.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
-        joystick.back().and(joystick.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
-        joystick.start().and(joystick.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
-        joystick.start().and(joystick.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
+        driver.back().and(driver.y()).whileTrue(drivetrain.sysIdDynamic(Direction.kForward));
+        driver.back().and(driver.x()).whileTrue(drivetrain.sysIdDynamic(Direction.kReverse));
+        driver.start().and(driver.y()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kForward));
+        driver.start().and(driver.x()).whileTrue(drivetrain.sysIdQuasistatic(Direction.kReverse));
 
         // Reset the field-centric heading on left bumper press.
-        joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
+        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
         drivetrain.registerTelemetry(logger::telemeterize);
+            //make controls:
+        driver.rightBumper().onTrue(s_shooter.runOnce(() -> s_shooter.shoot(0.5)));
+        driver.leftBumper().onTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.5)));
+        driver.leftTrigger().onTrue(s_floor.runOnce(() -> s_floor.runFeed(0.5)));
+        driver.rightTrigger().onTrue(s_intake.runOnce(() -> s_intake.runFeed(0.5)));
+        //off toggles:
+        driver.povRight().onTrue(s_shooter.runOnce(() -> s_shooter.shoot(0.0)));
+        driver.povLeft().onTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(0.0)));
+        driver.povDown().onTrue(s_floor.runOnce(() -> s_floor.runFeed(0.0)));
+        driver.povUp().onTrue(s_intake.runOnce(() -> s_intake.runFeed(0.0)));
+        //Pivot:
+        driver.a().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)));
+        driver.y().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)));
     }
 
     public Command getAutonomousCommand() {
@@ -163,4 +175,5 @@ public class RobotContainer {
             drivetrain.applyRequest(() -> idle)
         );
     }
+
 }
