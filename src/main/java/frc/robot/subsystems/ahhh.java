@@ -21,7 +21,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
-public class Hood extends SubsystemBase 
+public class ahhh extends SubsystemBase 
 {
     private static final int CONFIG_RETRIES = Constants.CONFIG_RETRIES;
     private static final double POSITION_SIGN = -1.0;
@@ -47,7 +47,7 @@ public class Hood extends SubsystemBase
     private final MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0);
     private static final InvertedValue HOOD_MOTOR_INVERTED = InvertedValue.Clockwise_Positive;
 
-    public Hood() 
+    public ahhh() 
     {
         hood_motor = new TalonFX(Constants.CAN_ID.HOOD, Constants.CAN_BUS.CANIVORE);
         configureMotor(hood_motor, HOOD_MOTOR_INVERTED, "Hood Motor");
