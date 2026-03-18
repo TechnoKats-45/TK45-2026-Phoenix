@@ -63,7 +63,7 @@ public class Constants
         public static final double INTAKE_ROTATE_SPEED = 0.5;   // TODO - TUNE
         public static final double PIVOT_ANGLE_DOWN = 0;      // TODO - TUNE
         public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
-        public static final double PIVOT_ANGLE_UP_STOWED = 0;   // TODO - tune
+        public static final double PIVOT_ANGLE_UP_STOWED = -100.634765625;
     }
 
     public class Shooter 
@@ -112,9 +112,10 @@ public class Constants
     {
         public static final double ROTATE_SPEED = 0.5; // TODO - TUNE
         public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
-        public static final double HOOD_ANGLE_DOWN = 0.0;
-        public static final double HOOD_ANGLE_UP_STOWED = 9; // TODO - tune
-        public static final double MAX_ANGLE = HOOD_ANGLE_UP_STOWED;
+        public static final double MIN_ANGLE = 14.653417;
+        public static final double MAX_ANGLE = 34.900662;
+        public static final double HOOD_ANGLE_DOWN = MIN_ANGLE;
+        public static final double HOOD_ANGLE_UP_STOWED = MAX_ANGLE;
     }
     
     public class Floor 

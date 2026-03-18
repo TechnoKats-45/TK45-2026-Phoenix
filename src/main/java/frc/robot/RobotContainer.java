@@ -72,9 +72,11 @@ public class RobotContainer
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
-        SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, 0.0);
+        SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
+        SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
+        SmartDashboard.putData("Zero Hood", Commands.runOnce(s_hood::zeroToMinimumAngle, s_hood).ignoringDisable(true));
     }
 
     public void periodic()
@@ -93,7 +95,7 @@ public class RobotContainer
             shooterMax);
         double hoodAngle = MathUtil.clamp(
             SmartDashboard.getNumber(MANUAL_HOOD_ANGLE_KEY, 0.0),
-            0.0,
+            Constants.Hood.MIN_ANGLE,
             hoodMax);
 
         s_shooter.shoot(shooterRps);
@@ -131,7 +133,7 @@ public class RobotContainer
         testController.rightBumper().whileTrue(s_shooter.runOnce(() -> s_shooter.setShooterPercent(1)));    // Max is 1
         testController.rightBumper().onFalse(s_shooter.runOnce(() -> s_shooter.stop()));
 
-        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederSpeed(1)));               // Max is 1
+        testController.leftBumper().whileTrue(s_feeder.runOnce(() -> s_feeder.setFeederPercent(1)));               // Max is 1
         testController.leftBumper().onFalse(s_feeder.runOnce(() -> s_feeder.stop()));
 
         testController.leftTrigger().whileTrue(s_floor.runOnce(() -> s_floor.setFloorPercent(0.5)));        // Max is 1
@@ -139,6 +141,9 @@ public class RobotContainer
 
         testController.rightTrigger().whileTrue(s_intake.runOnce(() -> s_intake.setIntakePercent(1)));      // Max is 1
         testController.rightTrigger().onFalse(s_intake.runOnce(() -> s_intake.stop()));
+
+        testController.a().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)));
+        testController.y().onTrue(s_intake.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)));
 
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.

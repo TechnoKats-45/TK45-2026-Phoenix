@@ -11,7 +11,7 @@ import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -33,7 +33,7 @@ public class Shooter extends SubsystemBase
 
     private static final double SLOT0_KS = 0; // TODO - tune    // 0.26 according to Recalc
     private static final double SLOT0_KA = 0; // TODO - tune    // 0.37 according to Recalc
-    private static final double SLOT0_KV = 0.0; // TODO - tune
+    private static final double SLOT0_KV = 0; // TODO - tune
     private static final double SLOT0_KP = 1; // TODO - tune
     private static final double SLOT0_KI = 0.0; // TODO - tune
     private static final double SLOT0_KD = 0.0; // TODO - tune
@@ -47,7 +47,7 @@ public class Shooter extends SubsystemBase
         private final TalonFX right_shooter;
         private final TalonFX left_middle_shooter;
         private final TalonFX right_middle_shooter;
-        private final VelocityTorqueCurrentFOC velocityRequest = new VelocityTorqueCurrentFOC(0);
+        private final VelocityVoltage  velocityRequest = new VelocityVoltage(0);
 
     public Shooter() 
     {
@@ -62,14 +62,13 @@ public class Shooter extends SubsystemBase
         configureMotor(left_shooter, InvertedValue.Clockwise_Positive, "Left Shooter");
         configureMotor(left_middle_shooter, InvertedValue.CounterClockwise_Positive, "Left Middle Shooter");
         // set followers
-        right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
-        right_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
-        left_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
+        configureFollowers();
         // Initialize feeder-specific components here
     }
     
     public void shoot(double speedRPS) 
     {
+        configureFollowers();
         left_shooter.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
     }
@@ -89,9 +88,11 @@ public class Shooter extends SubsystemBase
     public void stop()
     {
         left_shooter.set(0);
-        right_shooter.set(0);
-        left_middle_shooter.set(0);
-        right_middle_shooter.set(0);
+    }
+
+    public void shootDumb()
+    {
+        left_shooter.set(1);
     }
 
     public double getSpeed() 
@@ -109,6 +110,13 @@ public class Shooter extends SubsystemBase
     public boolean isUpToSpeed()
     {
         return isAtSpeed();
+    }
+
+    private void configureFollowers()
+    {
+        right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
+        right_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
+        left_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 

@@ -11,7 +11,7 @@ import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -29,11 +29,12 @@ public class Intake extends SubsystemBase
     
     // Pivot Vars
 
-    private static final double STATOR_CURRENT_LIMIT_AMPS_PIVOT = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS_PIVOT = 60.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS_PIVOT = 40.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS_PIVOT = 20.0;
     private static final double MM_CRUISE_RPS_PIVOT = 1; // TODO TUNE
     private static final double MM_ACCEL_RPS2_PIVOT = 10; // TODO TUNE
-    private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 70.0; // TODO TUNE
+    private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80.0; // TODO TUNE
+    private static final double DEGREES_PER_ROTATION = 360.0;
     private static final double PEAK_FORWARD_VOLTS_PIVOT= 16.0;
     private static final double PEAK_REVERSE_VOLTS_PIVOT= -16.0; 
     private double currentAngleSetPoint = 0.0;   
@@ -43,7 +44,7 @@ public class Intake extends SubsystemBase
     private static final double SLOT0_KV = 0.0; // TODO TUNE
     private static final double SLOT0_KP = 100.0; // TODO TUNE
     private static final double SLOT0_KI = 0.0; // TODO TUNE
-    private static final double SLOT0_KD = 1.0; // TODO TUNE
+    private static final double SLOT0_KD = 0; // TODO TUNE
     
     //Pivot Inverted Values TODO TUNE
     private static final InvertedValue LEFT_PIVOT_INVERTED = InvertedValue.CounterClockwise_Positive;
@@ -82,16 +83,16 @@ public class Intake extends SubsystemBase
     // declare rollor motor
     private final TalonFX intake_left_roller_motor;
     private final TalonFX intake_right_roller_motor;
-    private final VelocityTorqueCurrentFOC velocityRequest = new VelocityTorqueCurrentFOC(0);
+    private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
     
 
 //configure all motors and set right motors as followers
     public Intake()
     {
-        intake_left_pivot_motor = new TalonFX(Constants.CAN_ID.INTAKE_LEFT_PIVOT, Constants.CAN_BUS.RIO);
+        intake_left_pivot_motor = new TalonFX(Constants.CAN_ID.INTAKE_LEFT_PIVOT, Constants.CAN_BUS.CANIVORE);
         configurePivotMotor(intake_left_pivot_motor, LEFT_PIVOT_INVERTED, "Left Pivot");
         
-        intake_right_pivot_motor = new TalonFX(Constants.CAN_ID.INTAKE_RIGHT_PIVOT, Constants.CAN_BUS.RIO);
+        intake_right_pivot_motor = new TalonFX(Constants.CAN_ID.INTAKE_RIGHT_PIVOT, Constants.CAN_BUS.CANIVORE);
         configurePivotMotor(intake_right_pivot_motor, RIGHT_PIVOT_INVERTED, "Right Pivot");
         intake_right_pivot_motor.setControl(new Follower(Constants.CAN_ID.INTAKE_LEFT_PIVOT, RIGHT_FOLLOW_PIVOT_ALIGNMENT));
         
@@ -105,7 +106,8 @@ public class Intake extends SubsystemBase
     
     public void zeroEncoder() 
     {
-        intake_left_pivot_motor.setPosition(0.0); 
+        intake_left_pivot_motor.setPosition(0.0);
+        currentAngleSetPoint = 0.0;
     }
 
     // pivot code
@@ -113,13 +115,14 @@ public class Intake extends SubsystemBase
     public void setAngle(double angle)
     {
         currentAngleSetPoint = angle;
-        intake_left_pivot_motor.setControl(motionMagicVoltage.withPosition(angle));
+        double targetRotations = angle / DEGREES_PER_ROTATION;
+        intake_left_pivot_motor.setControl(motionMagicVoltage.withPosition(targetRotations));
         SmartDashboard.putNumber("Intake Set Point", angle);
     }
 
     public double getAngle()
     {
-        return intake_left_pivot_motor.getPosition().getValueAsDouble();
+        return intake_left_pivot_motor.getPosition().getValueAsDouble() * DEGREES_PER_ROTATION;
     }
 
     public boolean isAligned()

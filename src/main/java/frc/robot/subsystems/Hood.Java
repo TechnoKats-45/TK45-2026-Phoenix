@@ -14,6 +14,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
+
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -22,13 +24,14 @@ import frc.robot.Constants;
 public class Hood extends SubsystemBase 
 {
     private static final int CONFIG_RETRIES = Constants.CONFIG_RETRIES;
+    private static final double POSITION_SIGN = -1.0;
 
     //VARS
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
     private static final double MM_CRUISE_RPS = 1; // TODO TUNE
     private static final double MM_ACCEL_RPS2 = 10; // TODO TUNE
-    private static final double SENSOR_TO_MECHANISM_RATIO = 1.0; // TODO TUNE
+    private static final double SENSOR_TO_MECHANISM_RATIO = 1.0; // TODO TUNE   // FIX THISSS
     private static final double PEAK_FORWARD_VOLTS= 16.0;
     private static final double PEAK_REVERSE_VOLTS= -16.0; 
     private double currentAngleSetPoint = 0.0; 
@@ -53,23 +56,39 @@ public class Hood extends SubsystemBase
     public void zeroEncoder()
     {
         hood_motor.setPosition(0.0);
+        currentAngleSetPoint = 0.0;
+    }
+
+    public void zeroToMinimumAngle()
+    {
+        hood_motor.setPosition(toMotorPosition(Constants.Hood.MIN_ANGLE));
+        currentAngleSetPoint = Constants.Hood.MIN_ANGLE;
     }
     public void setAngle(double angle)
     {
         currentAngleSetPoint = angle;
-        hood_motor.setControl(motionMagicVoltage.withPosition(angle));
+        hood_motor.setControl(motionMagicVoltage.withPosition(toMotorPosition(angle)));
         SmartDashboard.putNumber("Hood Set Point", angle);
     }
 
     public double getAngle()
     {
-        return hood_motor.getPosition().getValueAsDouble();
+        return fromMotorPosition(hood_motor.getPosition().getValueAsDouble());
     }
 
     public boolean isAligned()
     {
         return Math.abs(getAngle() - currentAngleSetPoint) <= Constants.Hood.ANGLE_TOLERANCE_DEGREES;
-    
+    }
+
+    private double toMotorPosition(double angle)
+    {
+        return POSITION_SIGN * angle;
+    }
+
+    private double fromMotorPosition(double motorPosition)
+    {
+        return POSITION_SIGN * motorPosition;
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
