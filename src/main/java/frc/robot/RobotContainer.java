@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 
 import frc.robot.commands.AutoAim;
+import frc.robot.commands.AutoFeed;
 import frc.robot.commands.AutoIntake;
 
 import frc.robot.subsystems.*;
@@ -242,15 +243,29 @@ public class RobotContainer
         );
 
         NamedCommands.registerCommand(
-        "DumpHopper",
-        new SequentialCommandGroup(
-            Commands.runOnce(() -> 
-            s_floor.setFloorPercent(.5)
+        "AutoFeed",
+        new AutoFeed(s_floor, s_feeder, 1.0)
+        );
+
+        NamedCommands.registerCommand(
+        "ShootAllHopper",
+        Commands.parallel(
+            new AutoAim(
+                drivetrain,
+                s_vision,
+                s_hood,
+                s_shooter,
+                () -> 0.0,
+                () -> 0.0,
+                driver.getHID(),
+                MaxSpeed,
+                MaxAngularRate
             ),
-            Commands.runOnce(() -> s_feeder.setFeederSpeed(50)),
-            new WaitCommand(1), 
-            Commands.runOnce(() -> s_shooter.shoot(50))
+            Commands.sequence(
+                new WaitCommand(0.5),
+                new AutoFeed(s_floor, s_feeder, 5)
             )
+        )
         );
 
         NamedCommands.registerCommand(
