@@ -55,7 +55,7 @@ public class RobotContainer
     public final Drivetrain drivetrain = TunerConstants.createDrivetrain();
 
     private final Intake s_intake = new Intake();
-    private final ahhh s_hood = new ahhh();
+    private final Hood s_hood = new Hood();
     private final Shooter s_shooter = new Shooter();
     private final Feeder s_feeder = new Feeder();
     private final Floor s_floor = new Floor();

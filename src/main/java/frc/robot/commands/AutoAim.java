@@ -19,7 +19,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
 import frc.robot.subsystems.Drivetrain;
-import frc.robot.subsystems.ahhh;
+import frc.robot.subsystems.Hood;
 import frc.robot.subsystems.Shooter;
 import frc.robot.subsystems.Vision;
 
@@ -27,7 +27,7 @@ public class AutoAim extends Command
 {
         private final Drivetrain drivetrain;
         private final Vision vision;
-        private final ahhh hood;
+        private final Hood hood;
         private final Shooter shooter;
         private final DoubleSupplier forwardSupplier;
         private final DoubleSupplier strafeSupplier;
@@ -40,7 +40,7 @@ public class AutoAim extends Command
         public AutoAim(
                 Drivetrain drivetrain,
                 Vision vision,
-                ahhh hood,
+                Hood hood,
                 Shooter shooter,
                 DoubleSupplier forwardSupplier,
                 DoubleSupplier strafeSupplier,
