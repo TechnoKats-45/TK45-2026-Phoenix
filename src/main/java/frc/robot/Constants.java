@@ -57,28 +57,32 @@ public class Constants
     
     public class Intake
     {
-        public static final double INTAKE_SPEED = 1;            // TODO - TUNE
-        public static final double SPEED_TOLERANCE_RPS = 0.5;   // TODO - TUNE
+        public static final double INTAKE_SPEED = 1;
+        public static final double SPEED_TOLERANCE_RPS = 0.5;
 
-        public static final double INTAKE_ROTATE_SPEED = 0.5;   // TODO - TUNE
-        public static final double PIVOT_ANGLE_DOWN = 0;      // TODO - TUNE
-        public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
+        public static final double INTAKE_ROTATE_SPEED = 0.5;
+        public static final double ANGLE_TOLERANCE_DEGREES = 1;
+
+        public static final double PIVOT_ANGLE_DOWN = 0;
         public static final double PIVOT_ANGLE_UP_STOWED = -100.634765625;
+        public static final double halfStow = -50;
     }
 
     public class Shooter 
     {
-        public static final double MAX_SPEED_RPS = 100.0; // TODO - TUNE
-        public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
+        public static final double MAX_SPEED_RPS = 100.0;
+        public static final double SPEED_TOLERANCE_RPS = 0.5;
 
         public record ShotProfile(double hoodDeg, double speedRps) {}
 
         public static final TreeMap<Double, ShotProfile> DISTANCE_ANGLE_SPEED = new TreeMap<>();
-        static {
-            DISTANCE_ANGLE_SPEED.put(70.0, new ShotProfile(0.0, 0.0));
-            DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(0.0, 0.0));
-            DISTANCE_ANGLE_SPEED.put(150.0, new ShotProfile(0.0, 0.0));
-            DISTANCE_ANGLE_SPEED.put(215.0, new ShotProfile(0.0, 0.0));
+        static 
+        {
+            // Format: distance_inches -> ShotProfile(hood_deg, speed_rps)
+            // Example: DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(22.0, 70.0));
+            DISTANCE_ANGLE_SPEED.put(60.0, new ShotProfile(Hood.MIN_ANGLE, 50));
+            DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(Hood.MIN_ANGLE, 60));
+            DISTANCE_ANGLE_SPEED.put(180.0, new ShotProfile(Hood.MIN_ANGLE, 80));
         }
 
         public static ShotProfile getShotProfileForDistanceInches(double distanceInches) {
@@ -143,17 +147,11 @@ public class Constants
         public static final int[] BLUE_HUB_FRONT_TAG_IDS = {25,26};
         public static final int[] RED_HUB_FRONT_TAG_IDS = {9,10};
 
-        public static final double AUTO_AIM_ROTATION_KP = .1;
-        public static final double AUTO_AIM_ROTATION_KI = 0.0;
-        public static final double AUTO_AIM_ROTATION_KD = 0.2;
         public static final double AUTO_AIM_TRANSLATION_DEADBAND = 0.1;
 
         public static final double AUTO_AIM_ROTATION_TOLERANCE_DEG = 2.0;
         public static final double AUTO_AIM_MAX_ROTATION_RATE_SCALE = .75;
         public static final double AUTO_AIM_MAX_ANGULAR_RATE_RPS = 1.5;
-
-        public static final double AUTO_AIM_FULL_SPEED_ERROR_DEG = 12.0;
-        public static final double AUTO_AIM_MIN_ROTATION_RATE_RAD_PER_SEC = 0.35;
 
         // Robot-to-camera transforms using measured offsets from robot center.
         // Input measurements were inches; converted here to meters.

@@ -295,6 +295,10 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem {
                 MathUtil.angleModulus(autoAimTargetHeading.minus(getState().Pose.getRotation()).getRadians()));
         return Math.abs(headingErrorDeg) <= autoAimToleranceDeg;
     }
+
+    public double getGyroYawDeg() {
+        return getPigeon2().getYaw().getValueAsDouble();
+    }
     
     private void configureAutoBuilder() 
     {

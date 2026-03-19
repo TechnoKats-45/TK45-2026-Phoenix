@@ -7,7 +7,6 @@ import static edu.wpi.first.units.Units.Volts;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -30,8 +29,6 @@ public class Floor extends SubsystemBase
     //Variables
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
-    private static final double MM_CRUISE_RPS = 50.0; // TODO TUNE
-    private static final double MM_ACCEL_RPS2 = 100.0; // TODO TUNE
     private static final double SENSOR_TO_MECHANISM_RATIO = 2.0; //TODO TUNE
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
@@ -70,7 +67,11 @@ public Floor()
         SmartDashboard.putNumber("Floor Setpoint RPS", currentSpeedSetpointRps);
     }
 
-    
+    public void setDumbSpeed(double percent)
+    {
+        left_motor.set(percent);
+    }
+
     public void setFloorPercent(double percentOutput) 
     {
         double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
@@ -104,9 +105,6 @@ public Floor()
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO))
-                .withMotionMagic(new MotionMagicConfigs()
-                        .withMotionMagicCruiseVelocity(RotationsPerSecond.of(MM_CRUISE_RPS))
-                        .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2)))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT0_KS)
                         .withKV(SLOT0_KV)

@@ -14,8 +14,6 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
-
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -29,19 +27,19 @@ public class Hood extends SubsystemBase
     //VARS
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
-    private static final double MM_CRUISE_RPS = 1; // TODO TUNE
-    private static final double MM_ACCEL_RPS2 = 10; // TODO TUNE
-    private static final double SENSOR_TO_MECHANISM_RATIO = 1.0; // TODO TUNE   // FIX THISSS
+    private static final double MM_CRUISE_RPS = 1;
+    private static final double MM_ACCEL_RPS2 = 10;
+    private static final double SENSOR_TO_MECHANISM_RATIO = 40;
     private static final double PEAK_FORWARD_VOLTS= 16.0;
     private static final double PEAK_REVERSE_VOLTS= -16.0; 
     private double currentAngleSetPoint = 0.0; 
     
     //PID
-    private static final double SLOT0_KS = 0.0; // TODO TUNE
-    private static final double SLOT0_KV = 0.0; // TODO TUNE
-    private static final double SLOT0_KP = 1.0; // TODO TUNE
-    private static final double SLOT0_KI = 0.0; // TODO TUNE
-    private static final double SLOT0_KD = 1.0; // TODO TUNE
+    private static final double SLOT0_KS = 0.0;
+    private static final double SLOT0_KV = 0.0;
+    private static final double SLOT0_KP = 0.1;
+    private static final double SLOT0_KI = 0.0;
+    private static final double SLOT0_KD = 0.0;
 
     private final TalonFX hood_motor; 
     private final MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0);

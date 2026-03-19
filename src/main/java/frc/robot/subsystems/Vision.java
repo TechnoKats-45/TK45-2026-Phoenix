@@ -51,6 +51,15 @@ public class Vision extends SubsystemBase {
     private Optional<PhotonPipelineResult> lastLeftResult = Optional.empty();
     private Optional<PhotonPipelineResult> lastRightResult = Optional.empty();
 
+    // Vision fusion tuning constants (hardcoded; not configurable via SmartDashboard)
+    private static final double MAX_TRANSLATION_JUMP_M = 6.0;
+    private static final double MAX_ROTATION_JUMP_DEG = 120.0;
+    private static final boolean ENABLE_POSE_FUSION = true;
+    private static final boolean ENABLE_INITIAL_POSE_SEED = true;
+    private static final boolean USE_VISION_ROTATION = false;
+    private static final double MAX_MEASUREMENT_AGE_SEC = 0.5;
+    private static final double FIELD_BOUNDS_MARGIN_M = 0.3;
+
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
 
@@ -71,13 +80,6 @@ public class Vision extends SubsystemBase {
                 Constants.Vision.ROBOT_TO_RIGHT_CAMERA);
         rightEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
 
-        SmartDashboard.putNumber("Vision/MaxTranslationJumpM", 3.0);
-        SmartDashboard.putNumber("Vision/MaxRotationJumpDeg", 60.0);
-        SmartDashboard.putBoolean("Vision/EnablePoseFusion", false);
-        SmartDashboard.putBoolean("Vision/EnableInitialPoseSeed", false);
-        SmartDashboard.putBoolean("Vision/UseVisionRotation", true);
-        SmartDashboard.putNumber("Vision/MaxMeasurementAgeSec", 0.5);
-        SmartDashboard.putNumber("Vision/FieldBoundsMarginM", 0.3);
         SmartDashboard.putBoolean("Vision/LastResetUsedVision", false);
     }
 
@@ -217,7 +219,7 @@ public class Vision extends SubsystemBase {
             double nowSec = Timer.getFPGATimestamp();
             double measurementAgeSec = nowSec - estimateTimestamp;
             SmartDashboard.putNumber("Vision/" + label + "/MeasurementAgeSec", measurementAgeSec);
-            if (measurementAgeSec > SmartDashboard.getNumber("Vision/MaxMeasurementAgeSec", 0.5)) {
+            if (measurementAgeSec > MAX_MEASUREMENT_AGE_SEC) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", "MeasurementTooOld");
                 continue;
@@ -237,13 +239,13 @@ public class Vision extends SubsystemBase {
                 continue;
             }
 
-            if (!SmartDashboard.getBoolean("Vision/EnablePoseFusion", true)) {
+            if (!ENABLE_POSE_FUSION) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", "FusionDisabled");
                 continue;
             }
 
-            if (!poseSeededFromVision && SmartDashboard.getBoolean("Vision/EnableInitialPoseSeed", true)) {
+            if (!poseSeededFromVision && ENABLE_INITIAL_POSE_SEED) {
                 drivetrain.resetPose(estimatedPose);
                 poseSeededFromVision = true;
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
@@ -252,8 +254,8 @@ public class Vision extends SubsystemBase {
             }
 
             Pose2d currentPose = drivetrain.getState().Pose;
-            double maxTransJump = SmartDashboard.getNumber("Vision/MaxTranslationJumpM", 3.0);
-            double maxRotJumpDeg = SmartDashboard.getNumber("Vision/MaxRotationJumpDeg", 60.0);
+            double maxTransJump = MAX_TRANSLATION_JUMP_M;
+            double maxRotJumpDeg = MAX_ROTATION_JUMP_DEG;
             double transJump = estimatedPose.getTranslation().getDistance(currentPose.getTranslation());
             double rotJumpDeg = Math.abs(estimatedPose.getRotation().minus(currentPose.getRotation()).getDegrees());
             if (transJump > maxTransJump || rotJumpDeg > maxRotJumpDeg) {
@@ -264,8 +266,7 @@ public class Vision extends SubsystemBase {
                 continue;
             }
 
-            boolean useVisionRotation = SmartDashboard.getBoolean("Vision/UseVisionRotation", true);
-            Pose2d fusedPose = useVisionRotation
+            Pose2d fusedPose = USE_VISION_ROTATION
                     ? estimatedPose
                     : new Pose2d(estimatedPose.getTranslation(), drivetrain.getState().Pose.getRotation());
             Matrix<N3, N1> stdDevs = getVisionStdDevs(result);
@@ -293,17 +294,16 @@ public class Vision extends SubsystemBase {
     private Matrix<N3, N1> getVisionStdDevs(PhotonPipelineResult result) {
         int tagCount = result.targets.size();
         if (tagCount >= 2) {
-            return VecBuilder.fill(0.4, 0.4, 0.8);
+            return VecBuilder.fill(0.2, 0.2, 0.5);
         }
-        return VecBuilder.fill(1.0, 1.0, 2.0);
+        return VecBuilder.fill(0.6, 0.6, 1.0);
     }
 
     private boolean isInFieldBounds(Pose2d pose) {
-        double marginMeters = SmartDashboard.getNumber("Vision/FieldBoundsMarginM", 0.3);
-        return pose.getX() >= -marginMeters
-                && pose.getX() <= FieldConstants.FIELD_LENGTH + marginMeters
-                && pose.getY() >= -marginMeters
-                && pose.getY() <= FieldConstants.FIELD_WIDTH + marginMeters;
+        return pose.getX() >= -FIELD_BOUNDS_MARGIN_M
+                && pose.getX() <= FieldConstants.FIELD_LENGTH + FIELD_BOUNDS_MARGIN_M
+                && pose.getY() >= -FIELD_BOUNDS_MARGIN_M
+                && pose.getY() <= FieldConstants.FIELD_WIDTH + FIELD_BOUNDS_MARGIN_M;
     }
 
     public boolean resetPoseFromVision() {

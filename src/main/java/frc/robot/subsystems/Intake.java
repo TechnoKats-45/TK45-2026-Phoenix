@@ -31,9 +31,9 @@ public class Intake extends SubsystemBase
 
     private static final double STATOR_CURRENT_LIMIT_AMPS_PIVOT = 40.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS_PIVOT = 20.0;
-    private static final double MM_CRUISE_RPS_PIVOT = 1; // TODO TUNE
-    private static final double MM_ACCEL_RPS2_PIVOT = 10; // TODO TUNE
-    private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80.0; // TODO TUNE
+    private static final double MM_CRUISE_RPS_PIVOT = 1;
+    private static final double MM_ACCEL_RPS2_PIVOT = 10;
+    private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80.0;
     private static final double DEGREES_PER_ROTATION = 360.0;
     private static final double PEAK_FORWARD_VOLTS_PIVOT= 16.0;
     private static final double PEAK_REVERSE_VOLTS_PIVOT= -16.0; 
@@ -54,21 +54,19 @@ public class Intake extends SubsystemBase
     //Roller Vars
     private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 60.0;
-    private static final double MM_CRUISE_RPS_ROLLER = 50.0; // TODO TUNE
-    private static final double MM_ACCEL_RPS2_ROLLER = 100.0; // TODO TUNE
-    private static final double SENSOR_TO_MECHANISM_RATIO_ROLLER = 2.0; //TODO TUNE
+    private static final double SENSOR_TO_MECHANISM_RATIO_ROLLER = 1.0;
     private static final double PEAK_FORWARD_VOLTS_ROLLER = 16.0;
     private static final double PEAK_REVERSE_VOLTS_ROLLER = -16.0;
-    private static final double MAX_INTAKE_SPEED_RPS = 400.0;
+    private static final double MAX_INTAKE_SPEED_RPS = 100.0;
 
     private double currentSpeedSetpointRps = 0.0;
     
     // ROLLERS PID
-    private static final double SLOT1_KS = 0.0; //  TODO TUNE
-    private static final double SLOT1_KV = 0.0; // TODO TUNE
-    private static final double SLOT1_KP = 100.0; // TODO TUNE
-    private static final double SLOT1_KI = 0.0; // TODO TUNE
-    private static final double SLOT1_KD = 1.0; // TODO TUNE
+    private static final double SLOT1_KS = 0.2;
+    private static final double SLOT1_KV = 0.12;
+    private static final double SLOT1_KP = 1;
+    private static final double SLOT1_KI = 0.0;
+    private static final double SLOT1_KD = 0;
 
     //Roller Inverted Values TODO - TUNE
     private static final InvertedValue LEFT_ROLLER_INVERTED = InvertedValue.CounterClockwise_Positive;
@@ -84,6 +82,16 @@ public class Intake extends SubsystemBase
     private final TalonFX intake_left_roller_motor;
     private final TalonFX intake_right_roller_motor;
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+
+    private void ensurePivotFollower() {
+        intake_right_pivot_motor.setControl(
+            new Follower(Constants.CAN_ID.INTAKE_LEFT_PIVOT, RIGHT_FOLLOW_PIVOT_ALIGNMENT));
+    }
+
+    private void ensureRollerFollower() {
+        intake_right_roller_motor.setControl(
+            new Follower(Constants.CAN_ID.INTAKE_LEFT_ROLLER, RIGHT_FOLLOW_ROLLER_ALIGNMENT));
+    }
     
 
 //configure all motors and set right motors as followers
@@ -94,14 +102,14 @@ public class Intake extends SubsystemBase
         
         intake_right_pivot_motor = new TalonFX(Constants.CAN_ID.INTAKE_RIGHT_PIVOT, Constants.CAN_BUS.CANIVORE);
         configurePivotMotor(intake_right_pivot_motor, RIGHT_PIVOT_INVERTED, "Right Pivot");
-        intake_right_pivot_motor.setControl(new Follower(Constants.CAN_ID.INTAKE_LEFT_PIVOT, RIGHT_FOLLOW_PIVOT_ALIGNMENT));
+        ensurePivotFollower();
         
         intake_left_roller_motor = new TalonFX(Constants.CAN_ID.INTAKE_LEFT_ROLLER, Constants.CAN_BUS.RIO);
         configureRollerMotor(intake_left_roller_motor, LEFT_ROLLER_INVERTED, "Left Roller");
         
         intake_right_roller_motor = new TalonFX(Constants.CAN_ID.INTAKE_RIGHT_ROLLER, Constants.CAN_BUS.RIO);
         configureRollerMotor(intake_right_roller_motor, RIGHT_ROLLER_INVERTED, "Right Roller");
-        intake_right_roller_motor.setControl(new Follower(Constants.CAN_ID.INTAKE_LEFT_ROLLER, RIGHT_FOLLOW_ROLLER_ALIGNMENT));
+        ensureRollerFollower();
     }
     
     public void zeroEncoder() 
@@ -116,6 +124,7 @@ public class Intake extends SubsystemBase
     {
         currentAngleSetPoint = angle;
         double targetRotations = angle / DEGREES_PER_ROTATION;
+        ensurePivotFollower();
         intake_left_pivot_motor.setControl(motionMagicVoltage.withPosition(targetRotations));
         SmartDashboard.putNumber("Intake Set Point", angle);
     }
@@ -133,6 +142,7 @@ public class Intake extends SubsystemBase
     public void setSpeed(double speedRps) 
     {
         currentSpeedSetpointRps = speedRps;
+        ensureRollerFollower();
         intake_left_roller_motor.setControl(velocityRequest.withVelocity(currentSpeedSetpointRps));
     }
 
@@ -156,7 +166,7 @@ public class Intake extends SubsystemBase
     {
         currentSpeedSetpointRps = 0.0;
         intake_left_roller_motor.stopMotor();
-        intake_right_roller_motor.stopMotor();
+        ensureRollerFollower();
         SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
@@ -217,9 +227,6 @@ public class Intake extends SubsystemBase
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO_ROLLER))
-                .withMotionMagic(new MotionMagicConfigs()
-                        .withMotionMagicCruiseVelocity(RotationsPerSecond.of(MM_CRUISE_RPS_ROLLER))
-                        .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2_ROLLER)))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT1_KS)
                         .withKV(SLOT1_KV)

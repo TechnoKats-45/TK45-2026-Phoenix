@@ -11,6 +11,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -32,6 +33,7 @@ import com.pathplanner.lib.auto.NamedCommands;
 public class RobotContainer 
 {
     private static final String MANUAL_SHOOTER_ENABLE_KEY = "Tuning/Manual Shooter Mode";
+    private static final String Test_Shoot_Key = "Test Shooter Mode";
     private static final String MANUAL_SHOOTER_SPEED_KEY = "Tuning/Manual Shooter RPS";
     private static final String MANUAL_HOOD_ANGLE_KEY = "Tuning/Manual Hood Angle";
     private static final String MANUAL_SHOOTER_MAX_KEY = "Tuning/Manual Shooter Max RPS";
@@ -40,6 +42,12 @@ public class RobotContainer
     // Declare and instantiate variables:
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
     private double MaxAngularRate = RotationsPerSecond.of(0.75).in(RadiansPerSecond); // 3/4 of a rotation per second max angular velocity
+    private static final double TRANSLATION_SLEW_RATE = 3.0; // units per second
+    private static final double ROTATION_SLEW_RATE = 6.0; // units per second
+
+    private final SlewRateLimiter xLimiter = new SlewRateLimiter(TRANSLATION_SLEW_RATE);
+    private final SlewRateLimiter yLimiter = new SlewRateLimiter(TRANSLATION_SLEW_RATE);
+    private final SlewRateLimiter rotLimiter = new SlewRateLimiter(ROTATION_SLEW_RATE);
 
     /* Setting up bindings for necessary control of the swerve drive platform */
     private final SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
@@ -71,6 +79,7 @@ public class RobotContainer
     private void initializeTuningDashboard()
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
+        SmartDashboard.putBoolean(Test_Shoot_Key, false);
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
@@ -82,6 +91,10 @@ public class RobotContainer
     public void periodic()
     {
         if (!SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false)) 
+        {
+            return;
+        }
+        if (!SmartDashboard.getBoolean(Test_Shoot_Key, false)) 
         {
             return;
         }
@@ -114,9 +127,9 @@ public class RobotContainer
         drivetrain.setDefaultCommand(
             // Drivetrain will execute this command periodically
             drivetrain.applyRequest(() ->
-                drive.withVelocityX(-driver.getLeftY() * MaxSpeed) // Drive forward with negative Y (forward)
-                    .withVelocityY(-driver.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                    .withRotationalRate(-driver.getRightX() * MaxAngularRate) // Drive counterclockwise with negative X (left)
+                drive.withVelocityX(xLimiter.calculate(-driver.getLeftY()) * MaxSpeed) // Drive forward with negative Y (forward)
+                    .withVelocityY(yLimiter.calculate(-driver.getLeftX()) * MaxSpeed) // Drive left with negative X (left)
+                    .withRotationalRate(rotLimiter.calculate(-driver.getRightX()) * MaxAngularRate) // Drive counterclockwise with negative X (left)
             )
         );
 
@@ -147,8 +160,20 @@ public class RobotContainer
 
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
+        driver.start().onTrue(Commands.runOnce(() -> s_vision.resetPoseFromVision(), s_vision));
+        driver.a().onTrue(Commands.runOnce(() -> {
+            double down = Constants.Intake.PIVOT_ANGLE_DOWN;
+            double stowed = Constants.Intake.PIVOT_ANGLE_UP_STOWED;
+            double midpoint = (down + stowed) / 2.0;
+            if (s_intake.getAngle() <= midpoint) {
+                s_intake.setAngle(down);
+            } else {
+                s_intake.setAngle(stowed);
+            }
+        }, s_intake));
 
-        driver.leftTrigger().whileTrue(new AutoAim(     // Auto aims swerve, hood, and shooter speed while left trigger held.
+        var autoAimTrigger = driver.leftTrigger();
+        autoAimTrigger.whileTrue(new AutoAim(     // Auto aims swerve, hood, and shooter speed while left trigger held.
             drivetrain,
             s_vision,
             s_hood,
@@ -159,15 +184,27 @@ public class RobotContainer
             MaxSpeed,
             MaxAngularRate
         ));
+        autoAimTrigger.onFalse(Commands.runOnce(() -> s_shooter.stopShooting(), s_shooter));
         
-        driver.rightTrigger().whileTrue(new ParallelCommandGroup    // Run the floor and feeder to shoot balls while right trigger held.
+        driver.rightTrigger().whileTrue(new SequentialCommandGroup    // Run the floor and feeder to shoot balls while right trigger held.
             (
-                Commands.runOnce(() -> s_floor.setFloorPercent(Constants.Floor.SHOOT_SPEED)),
-                Commands.runOnce(() -> s_feeder.setFeederPercent(Constants.Feeder.SHOOT_SPEED))
+                Commands.runOnce(() -> s_feeder.setFeederPercent(-1)),
+                new WaitCommand(0.25),
+                new ParallelCommandGroup
+                (
+                    Commands.run(() -> s_floor.setDumbSpeed(.5)),
+                    Commands.run(() -> s_feeder.setFeederPercent(1))
+                )
+            )
+        );
+        driver.rightTrigger().onFalse(new ParallelCommandGroup
+            (
+                Commands.runOnce(() -> s_floor.stop()),
+                Commands.runOnce(() -> s_feeder.stop(), s_feeder)
             )
         );
 
-        driver.rightBumper().toggleOnTrue(new AutoIntake(s_intake, s_floor));   // Toggle the intake and floor to intake balls when right bumper pressed.
+        driver.rightBumper().toggleOnTrue(new AutoIntake(s_intake, s_floor, s_feeder));   // Toggle the intake and floor to intake balls when right bumper pressed.
         
         driver.leftBumper().whileTrue(Commands.startEnd(    // Run the intake, floor, and feeder in reverse to eject balls while left bumper held - for unjamming or dumping.
             () -> {

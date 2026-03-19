@@ -15,6 +15,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
@@ -25,6 +26,11 @@ import frc.robot.subsystems.Vision;
 
 public class AutoAim extends Command 
 {
+        // Auto-aim rotation PID (local to AutoAim, not in Constants)
+        private static final double ROTATION_KP = 10;   
+        private static final double ROTATION_KI = 0.0;
+        private static final double ROTATION_KD = 0.0;
+
         private final Drivetrain drivetrain;
         private final Vision vision;
         private final Hood hood;
@@ -36,6 +42,10 @@ public class AutoAim extends Command
         private final double maxAngularRateRadiansPerSecond;
         private final SwerveRequest.FieldCentric driveRequest = new SwerveRequest.FieldCentric()
                 .withDriveRequestType(DriveRequestType.OpenLoopVoltage);
+        private final PIDController rotationController = new PIDController(
+                ROTATION_KP,
+                ROTATION_KI,
+                ROTATION_KD);
 
         public AutoAim(
                 Drivetrain drivetrain,
@@ -58,6 +68,10 @@ public class AutoAim extends Command
                         this.maxSpeedMetersPerSecond = maxSpeedMetersPerSecond;
                         this.maxAngularRateRadiansPerSecond = maxAngularRateRadiansPerSecond;
 
+                        rotationController.enableContinuousInput(-Math.PI, Math.PI);
+                        rotationController.setTolerance(
+                                Math.toRadians(Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG));
+
                         addRequirements(drivetrain, hood, shooter);
                 }
 
@@ -69,6 +83,7 @@ public class AutoAim extends Command
         @Override
         public void execute() 
         {
+                boolean testShootMode = SmartDashboard.getBoolean("Test Shooter Mode", false);
                 Optional<Alliance> alliance = DriverStation.getAlliance();
                 Alliance resolvedAlliance = alliance.orElse(Alliance.Blue);
                 Pose3d hubCenter = FieldConstants.Hub.getCenterForAlliance(Optional.of(resolvedAlliance));
@@ -89,9 +104,11 @@ public class AutoAim extends Command
                 Translation2d robotToGoal = targetPose.toPose2d().getTranslation()
                         .minus(drivetrain.getState().Pose.getTranslation());
                 Rotation2d desiredHeading = robotToGoal.getAngle().plus(Rotation2d.k180deg);
-                drivetrain.setAutoAimTargetHeading(
-                        desiredHeading,
-                        Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG);
+                if (!testShootMode) {
+                        drivetrain.setAutoAimTargetHeading(
+                                desiredHeading,
+                                Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG);
+                }
 
                 double rangeMeters = hubObservation
                                 .map(Vision.HubObservation::rangeToHubCenterMeters)
@@ -103,42 +120,27 @@ public class AutoAim extends Command
                 hood.setAngle(shotProfile.hoodDeg());
                 shooter.shoot(shotProfile.speedRps());
 
-                Rotation2d headingError = desiredHeading.minus(drivetrain.getState().Pose.getRotation());
-                double headingErrorRad = MathUtil.angleModulus(headingError.getRadians());
-                double headingErrorDeg = Math.toDegrees(headingErrorRad);
-                double toleranceRad = Math.toRadians(Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG);
+                double currentHeadingRad = drivetrain.getState().Pose.getRotation().getRadians();
+                double desiredHeadingRad = desiredHeading.getRadians();
                 double maxAutoAimRotationRate = Math.max(
-                        maxAngularRateRadiansPerSecond,
-                        Units.rotationsToRadians(Constants.Vision.AUTO_AIM_MAX_ANGULAR_RATE_RPS))
-                        * Constants.Vision.AUTO_AIM_MAX_ROTATION_RATE_SCALE;
-                double fullSpeedErrorRad = Math.toRadians(Constants.Vision.AUTO_AIM_FULL_SPEED_ERROR_DEG);
-
-                double rotationRate = 0.0;
-                if (Math.abs(headingErrorRad) > toleranceRad) {
-                        double errorMagnitudeRad = Math.abs(headingErrorRad);
-                        double commandedMagnitude;
-
-                        if (errorMagnitudeRad >= fullSpeedErrorRad) {
-                                commandedMagnitude = maxAutoAimRotationRate;
-                        } else {
-                                double rampFraction = MathUtil.clamp(
-                                        (errorMagnitudeRad - toleranceRad) / (fullSpeedErrorRad - toleranceRad),
-                                        0.0,
-                                        1.0);
-                                commandedMagnitude = MathUtil.interpolate(
-                                        Constants.Vision.AUTO_AIM_MIN_ROTATION_RATE_RAD_PER_SEC,
-                                        maxAutoAimRotationRate,
-                                        rampFraction);
-                        }
-
-                        rotationRate = Math.copySign(commandedMagnitude, headingErrorRad);
-                }
+                                maxAngularRateRadiansPerSecond,
+                                Units.rotationsToRadians(Constants.Vision.AUTO_AIM_MAX_ANGULAR_RATE_RPS))
+                                * Constants.Vision.AUTO_AIM_MAX_ROTATION_RATE_SCALE;
+                double rawRotationRate = rotationController.calculate(currentHeadingRad, desiredHeadingRad);
+                double rotationRate = testShootMode
+                                ? 0.0
+                                : MathUtil.clamp(rawRotationRate, -maxAutoAimRotationRate, maxAutoAimRotationRate);
+                double headingErrorDeg = Math.toDegrees(
+                                MathUtil.angleModulus(desiredHeadingRad - currentHeadingRad));
 
                 double forward = MathUtil.applyDeadband(
                         -forwardSupplier.getAsDouble(),
                         Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
                 double strafe = MathUtil.applyDeadband(
                         -strafeSupplier.getAsDouble(),
+                        Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
+                double manualRot = MathUtil.applyDeadband(
+                        -rumbleController.getRawAxis(4),
                         Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
 
                 drivetrain.setControl(
@@ -147,13 +149,16 @@ public class AutoAim extends Command
                                 .withRotationalDeadband(0.0)
                                 .withVelocityX(forward * maxSpeedMetersPerSecond)
                                 .withVelocityY(strafe * maxSpeedMetersPerSecond)
-                                .withRotationalRate(rotationRate));
+                                .withRotationalRate(testShootMode
+                                        ? manualRot * maxAngularRateRadiansPerSecond
+                                        : rotationRate));
 
                 SmartDashboard.putString("AutoAim/Alliance", resolvedAlliance.name());
                 SmartDashboard.putString("AutoAim/Zone", inPassingZone ? "Passing" : "Scoring");
                 SmartDashboard.putBoolean("AutoAim/UsingVision", hubObservation.isPresent());
                 SmartDashboard.putBoolean("AutoAim/HubTagIdsConfigured", canUseHubVision);
                 SmartDashboard.putString("AutoAim/AimSource", hubObservation.map(Vision.HubObservation::source).orElse("pose"));
+                SmartDashboard.putBoolean("AutoAim/TestShootMode", testShootMode);
                 SmartDashboard.putNumber("AutoAim/TargetX", targetPose.getX());
                 SmartDashboard.putNumber("AutoAim/TargetY", targetPose.getY());
                 SmartDashboard.putNumber("AutoAim/RangeInches", rangeInches);
@@ -165,10 +170,16 @@ public class AutoAim extends Command
                 SmartDashboard.putBoolean(
                         "AutoAim/RotationAligned",
                         drivetrain.isRotAligned());
+                SmartDashboard.putNumber(
+                        "AutoAim/RobotHeadingDeg",
+                        drivetrain.getState().Pose.getRotation().getDegrees());
+                SmartDashboard.putNumber(
+                        "AutoAim/GyroYawDeg",
+                        drivetrain.getGyroYawDeg());
 
-                boolean readyToShoot = drivetrain.isRotAligned()
-                        && hood.isAligned()
-                        && shooter.isUpToSpeed();
+                boolean readyToShoot = testShootMode
+                        ? (hood.isAligned() && shooter.isAtSpeed())
+                        : (drivetrain.isRotAligned() && hood.isAligned() && shooter.isAtSpeed());
                 rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, readyToShoot ? 1.0 : 0.0);
         }
 
@@ -177,6 +188,8 @@ public class AutoAim extends Command
         {
                 drivetrain.clearAutoAimTargetHeading();
                 rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
+                shooter.stopShooting();
+                rotationController.reset();
                 drivetrain.setControl(
                         driveRequest
                                 .withVelocityX(0.0 * maxSpeedMetersPerSecond)

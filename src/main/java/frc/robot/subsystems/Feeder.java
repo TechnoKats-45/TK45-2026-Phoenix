@@ -1,13 +1,11 @@
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -28,14 +26,12 @@ public class Feeder extends SubsystemBase
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
-    private static final double MM_CRUISE_RPS = 120;
-    private static final double MM_ACCEL_RPS2 = 5;
     private static final double MAX_FEEDER_SPEED_RPS = 100.0; // 100 is max rps for Kraken X60
-    private static final double SLOT0_KS = 0; // TODO - tune
-    private static final double SLOT0_KV = 0; // TODO - tune
-    private static final double SLOT0_KP = 1; // TODO - tune
-    private static final double SLOT0_KI = 0; // TODO - tune
-    private static final double SLOT0_KD = 0; // TODO - tune
+    private static final double SLOT0_KS = 0.2;
+    private static final double SLOT0_KV = 0.12;
+    private static final double SLOT0_KP = 1;
+    private static final double SLOT0_KI = 0;
+    private static final double SLOT0_KD = 0;
 
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
@@ -46,6 +42,10 @@ public class Feeder extends SubsystemBase
     private final TalonFX left_feeder;
     private final TalonFX right_feeder;
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0);
+
+    private void ensureFollower() {
+        right_feeder.setControl(new Follower(left_feeder.getDeviceID(), MotorAlignmentValue.Opposed));
+    }
     
     public Feeder() 
     {
@@ -53,13 +53,14 @@ public class Feeder extends SubsystemBase
         right_feeder = new TalonFX(Constants.CAN_ID.RIGHT_FEEDER, Constants.CAN_BUS.CANIVORE);
         configureMotor(left_feeder, InvertedValue.CounterClockwise_Positive, "Left Feeder");
         configureMotor(right_feeder, InvertedValue.Clockwise_Positive, "Right Feeder");
-        right_feeder.setControl(new Follower(left_feeder.getDeviceID(), MotorAlignmentValue.Opposed));
+        ensureFollower();
 
         // Initialize feeder-specific components here
     }
 
     public void setFeederSpeed(double speedRPS) 
     {
+        ensureFollower();
         left_feeder.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(speedRPS)));
         currentSpeedSetpointRps = speedRPS;
     }
@@ -68,6 +69,12 @@ public class Feeder extends SubsystemBase
     {
         double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
         setFeederSpeed(clamped * MAX_FEEDER_SPEED_RPS);
+    }
+
+    public void setDumbSpeed(double percent)
+    {
+        ensureFollower();
+        left_feeder.set(percent);
     }
 
     public double getSpeed() 
@@ -84,7 +91,7 @@ public class Feeder extends SubsystemBase
     public void stop() 
     {
         left_feeder.set(0);
-        right_feeder.set(0);
+        ensureFollower();
     }   
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
@@ -97,9 +104,6 @@ public class Feeder extends SubsystemBase
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO))
-                .withMotionMagic(new MotionMagicConfigs()
-                        .withMotionMagicCruiseVelocity(RotationsPerSecond.of(MM_CRUISE_RPS))
-                        .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2)))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT0_KS)
                         .withKV(SLOT0_KV)

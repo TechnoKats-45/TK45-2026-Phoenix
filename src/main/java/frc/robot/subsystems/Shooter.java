@@ -28,13 +28,13 @@ public class Shooter extends SubsystemBase
     private static final double STATOR_CURRENT_LIMIT_AMPS = 120;   // 120
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;   // 60
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
-    private static final double MM_CRUISE_RPS = 100;
-    private static final double MM_ACCEL_RPS2 = 5;
 
-    private static final double SLOT0_KS = 0; // TODO - tune    // 0.26 according to Recalc
-    private static final double SLOT0_KA = 0; // TODO - tune    // 0.37 according to Recalc
-    private static final double SLOT0_KV = 0; // TODO - tune
-    private static final double SLOT0_KP = 1; // TODO - tune
+    // Initial velocity-loop tuning for 1:1 Kraken X60 shooter.
+    private static final double SLOT0_KS = 0.2; // TODO - tune
+    private static final double SLOT0_KA = 0.0; // TODO - tune
+    // 12V / 100 RPS = 0.12 V per RPS (approx for Kraken X60 at 1:1)
+    private static final double SLOT0_KV = 0.12; // TODO - tune
+    private static final double SLOT0_KP = 0.1; // TODO - tune
     private static final double SLOT0_KI = 0.0; // TODO - tune
     private static final double SLOT0_KD = 0.0; // TODO - tune
 
@@ -44,10 +44,10 @@ public class Shooter extends SubsystemBase
     private double currentSpeedSetpointRps = 0.0;
 
     private final TalonFX left_shooter;
-        private final TalonFX right_shooter;
-        private final TalonFX left_middle_shooter;
-        private final TalonFX right_middle_shooter;
-        private final VelocityVoltage  velocityRequest = new VelocityVoltage(0);
+    private final TalonFX right_shooter;
+    private final TalonFX left_middle_shooter;
+    private final TalonFX right_middle_shooter;
+    private final VelocityVoltage  velocityRequest = new VelocityVoltage(0);
 
     public Shooter() 
     {
@@ -76,7 +76,7 @@ public class Shooter extends SubsystemBase
     public void setShooterPercent(double percentOutput) 
     {
         double clamped = Math.max(-1.0, Math.min(1.0, percentOutput));
-        shoot(clamped * MM_CRUISE_RPS);
+        shoot(clamped * Constants.Shooter.MAX_SPEED_RPS);
     }
 
     public void stopShooting() 
@@ -107,11 +107,6 @@ public class Shooter extends SubsystemBase
         return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Shooter.SPEED_TOLERANCE_RPS;
     }
 
-    public boolean isUpToSpeed()
-    {
-        return isAtSpeed();
-    }
-
     private void configureFollowers()
     {
         right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
@@ -129,9 +124,6 @@ public class Shooter extends SubsystemBase
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO))
-                .withMotionMagic(new MotionMagicConfigs()
-                        .withMotionMagicCruiseVelocity(RotationsPerSecond.of(MM_CRUISE_RPS))
-                        .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(MM_ACCEL_RPS2)))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT0_KS)
                         .withKA(SLOT0_KA)
@@ -139,7 +131,6 @@ public class Shooter extends SubsystemBase
                         .withKP(SLOT0_KP)
                         .withKI(SLOT0_KI)
                         .withKD(SLOT0_KD));
-
         shooterConfigs.MotorOutput.Inverted = invertedValue;
         shooterConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
         shooterConfigs.Voltage
