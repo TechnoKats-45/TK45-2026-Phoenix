@@ -49,6 +49,7 @@ public class Hood extends SubsystemBase
     {
         hood_motor = new TalonFX(Constants.CAN_ID.HOOD, Constants.CAN_BUS.CANIVORE);
         configureMotor(hood_motor, HOOD_MOTOR_INVERTED, "Hood Motor");
+        zeroToMinimumAngle();
     }
 
     public void zeroEncoder()
@@ -59,8 +60,8 @@ public class Hood extends SubsystemBase
 
     public void zeroToMinimumAngle()
     {
-        hood_motor.setPosition(toMotorPosition(Constants.Hood.MIN_ANGLE));
-        currentAngleSetPoint = Constants.Hood.MIN_ANGLE;
+        hood_motor.setPosition(toMotorPosition(Constants.Hood.HOOD_ANGLE_DOWN));
+        currentAngleSetPoint = Constants.Hood.HOOD_ANGLE_DOWN;
     }
     public void setAngle(double angle)
     {

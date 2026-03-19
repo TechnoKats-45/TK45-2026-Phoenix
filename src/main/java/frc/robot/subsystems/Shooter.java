@@ -1,17 +1,16 @@
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Volts;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.FeedbackConfigs;
-import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.TorqueCurrentConfigs;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityVoltage;
+import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -25,20 +24,24 @@ import frc.robot.Constants;
 
 public class Shooter extends SubsystemBase 
 {
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 120;   // 120
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;   // 60
-    private static final double SENSOR_TO_MECHANISM_RATIO = 1;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double SENSOR_TO_MECHANISM_RATIO = 1.0;
 
-    private static final double SLOT0_KS = 0.0; // TODO - tune
-    private static final double SLOT0_KA = 0.0; // TODO - tune
-    // 12V / 100 RPS = 0.12 V per RPS (approx for Kraken X60 at 1:1)
-    private static final double SLOT0_KV = 0.12; // TODO - tune
-    private static final double SLOT0_KP = 0.5; // TODO - tune    // 0.75 seemed ok - not oscillations, 1 ok, anything higher is hella oscillations
-    private static final double SLOT0_KI = 0.1; // TODO - tune
-    private static final double SLOT0_KD = 0.0; // TODO - tune
+    // Suggested starting values for VelocityTorqueCurrentFOC.
+    // These gains are in torque-current units, so they are much smaller than velocity-voltage gains.
+    private static final double SLOT0_KS = 3.0;
+    private static final double SLOT0_KP = 10.0;
+    private static final double SLOT0_KI = 0.0;
+    private static final double SLOT0_KD = 0.0;
+    private static final double SLOT0_KV = 0.0;
+    private static final double SLOT0_KA = 0.0;
+    private static final double REQUEST_FEEDFORWARD_AMPS = 2.0;
+    private static final double FOLLOWER_STATUS_UPDATE_HZ = 100.0;
 
-    private static final double PEAK_FORWARD_VOLTS = 16.0;
-    private static final double PEAK_REVERSE_VOLTS = -16.0;
+    private static final double PEAK_FORWARD_TORQUE_CURRENT_AMPS = 120.0;
+    private static final double PEAK_REVERSE_TORQUE_CURRENT_AMPS = -120.0;
+    private static final double TORQUE_NEUTRAL_DEADBAND_AMPS = 0.0;
 
     private double currentSpeedSetpointRps = 0.0;
 
@@ -46,7 +49,7 @@ public class Shooter extends SubsystemBase
     private final TalonFX right_shooter;
     private final TalonFX left_middle_shooter;
     private final TalonFX right_middle_shooter;
-    private final VelocityVoltage  velocityRequest = new VelocityVoltage(0);
+    private final VelocityTorqueCurrentFOC velocityRequest = new VelocityTorqueCurrentFOC(0);
 
     public Shooter() 
     {
@@ -60,6 +63,10 @@ public class Shooter extends SubsystemBase
         configureMotor(right_shooter, InvertedValue.CounterClockwise_Positive, "Right Shooter");
         configureMotor(left_shooter, InvertedValue.Clockwise_Positive, "Left Shooter");
         configureMotor(left_middle_shooter, InvertedValue.CounterClockwise_Positive, "Left Middle Shooter");
+        BaseStatusSignal.setUpdateFrequencyForAll(
+                FOLLOWER_STATUS_UPDATE_HZ,
+                left_shooter.getTorqueCurrent(),
+                left_shooter.getVelocity());
         // set followers
         configureFollowers();
         // Initialize feeder-specific components here
@@ -68,7 +75,13 @@ public class Shooter extends SubsystemBase
     public void shoot(double speedRPS) 
     {
         configureFollowers();
-        left_shooter.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(speedRPS)));
+        StatusCode status = left_shooter.setControl(
+                velocityRequest
+                        .withVelocity(RotationsPerSecond.of(speedRPS))
+                        .withFeedForward(REQUEST_FEEDFORWARD_AMPS));
+        if (!status.isOK()) {
+            System.out.println("Left Shooter setControl failed: " + status);
+        }
         currentSpeedSetpointRps = speedRPS;
     }
 
@@ -80,18 +93,26 @@ public class Shooter extends SubsystemBase
 
     public void stopShooting() 
     {
-        left_shooter.setControl(velocityRequest.withVelocity(RotationsPerSecond.of(0)));
+        StatusCode status = left_shooter.setControl(
+                velocityRequest
+                        .withVelocity(RotationsPerSecond.of(0))
+                        .withFeedForward(0));
+        if (!status.isOK()) {
+            System.out.println("Left Shooter stop setControl failed: " + status);
+        }
         currentSpeedSetpointRps = 0.0;
     }
 
     public void stop()
     {
         left_shooter.set(0);
+        currentSpeedSetpointRps = 0.0;
     }
 
     public void shootDumb()
     {
         left_shooter.set(1);
+        currentSpeedSetpointRps = Constants.Shooter.MAX_SPEED_RPS;
     }
 
     public double getSpeed() 
@@ -108,9 +129,25 @@ public class Shooter extends SubsystemBase
 
     private void configureFollowers()
     {
-        right_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned));
-        right_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
-        left_middle_shooter.setControl(new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed));
+        StatusCode rightMiddleStatus = right_middle_shooter.setControl(
+                new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Aligned)
+                        .withUpdateFreqHz(FOLLOWER_STATUS_UPDATE_HZ));
+        StatusCode rightStatus = right_shooter.setControl(
+                new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed)
+                        .withUpdateFreqHz(FOLLOWER_STATUS_UPDATE_HZ));
+        StatusCode leftMiddleStatus = left_middle_shooter.setControl(
+                new Follower(left_shooter.getDeviceID(), MotorAlignmentValue.Opposed)
+                        .withUpdateFreqHz(FOLLOWER_STATUS_UPDATE_HZ));
+
+        if (!rightMiddleStatus.isOK()) {
+            System.out.println("Right Middle Shooter follower failed: " + rightMiddleStatus);
+        }
+        if (!rightStatus.isOK()) {
+            System.out.println("Right Shooter follower failed: " + rightStatus);
+        }
+        if (!leftMiddleStatus.isOK()) {
+            System.out.println("Left Middle Shooter follower failed: " + leftMiddleStatus);
+        }
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
@@ -119,22 +156,24 @@ public class Shooter extends SubsystemBase
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
                         .withSupplyCurrentLimit(SUPPLY_CURRENT_LIMIT_AMPS)
-                        .withStatorCurrentLimitEnable(true))
+                        .withStatorCurrentLimitEnable(true)
+                        .withSupplyCurrentLimitEnable(true))
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO))
                 .withSlot0(new Slot0Configs()
                         .withKS(SLOT0_KS)
-                        .withKA(SLOT0_KA)
-                        .withKV(SLOT0_KV)
                         .withKP(SLOT0_KP)
                         .withKI(SLOT0_KI)
-                        .withKD(SLOT0_KD));
+                        .withKD(SLOT0_KD)
+                        .withKV(SLOT0_KV)
+                        .withKA(SLOT0_KA))
+                .withTorqueCurrent(new TorqueCurrentConfigs()
+                        .withPeakForwardTorqueCurrent(PEAK_FORWARD_TORQUE_CURRENT_AMPS)
+                        .withPeakReverseTorqueCurrent(PEAK_REVERSE_TORQUE_CURRENT_AMPS)
+                        .withTorqueNeutralDeadband(TORQUE_NEUTRAL_DEADBAND_AMPS));
         shooterConfigs.MotorOutput.Inverted = invertedValue;
         shooterConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
-        shooterConfigs.Voltage
-                .withPeakForwardVoltage(Volts.of(PEAK_FORWARD_VOLTS))
-                .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
 
         StatusCode status = StatusCode.StatusCodeNotInitialized;
         for (int i = 0; i < Constants.CONFIG_RETRIES; ++i) {
