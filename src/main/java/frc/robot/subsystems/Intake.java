@@ -62,9 +62,9 @@ public class Intake extends SubsystemBase
     private double currentSpeedSetpointRps = 0.0;
     
     // ROLLERS PID
-    private static final double SLOT1_KS = 0.2;
-    private static final double SLOT1_KV = 0.12;
-    private static final double SLOT1_KP = 1;
+    private static final double SLOT1_KS = 0;
+    private static final double SLOT1_KV = 0;
+    private static final double SLOT1_KP = .1;
     private static final double SLOT1_KI = 0.0;
     private static final double SLOT1_KD = 0;
 

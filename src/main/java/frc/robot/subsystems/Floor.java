@@ -38,7 +38,7 @@ public class Floor extends SubsystemBase
     // PID
     private static final double SLOT0_KS = 0; // TODO TUNE
     private static final double SLOT0_KV = 0; // TODO TUNE
-    private static final double SLOT0_KP = 1; // TODO TUNE
+    private static final double SLOT0_KP = .1; // TODO TUNE
     private static final double SLOT0_KI = 0; // TODO TUNE
     private static final double SLOT0_KD = 0; // TODO TUNE
     

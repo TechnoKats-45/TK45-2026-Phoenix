@@ -186,9 +186,10 @@ public class AutoAim extends Command
         @Override
         public void end(boolean interrupted) 
         {
+
                 drivetrain.clearAutoAimTargetHeading();
                 rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
-                shooter.stopShooting();
+                shooter.stop();
                 rotationController.reset();
                 drivetrain.setControl(
                         driveRequest

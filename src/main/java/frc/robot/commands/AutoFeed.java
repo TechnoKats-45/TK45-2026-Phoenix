@@ -3,7 +3,6 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.Feeder;
 import frc.robot.subsystems.Floor;
-
 public class AutoFeed extends Command 
 {
     private final Floor floor;

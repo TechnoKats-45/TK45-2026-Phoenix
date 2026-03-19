@@ -27,8 +27,8 @@ public class Feeder extends SubsystemBase
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
     private static final double MAX_FEEDER_SPEED_RPS = 100.0; // 100 is max rps for Kraken X60
-    private static final double SLOT0_KS = 0.2;
-    private static final double SLOT0_KV = 0.12;
+    private static final double SLOT0_KS = 0;
+    private static final double SLOT0_KV = 0;
     private static final double SLOT0_KP = 1;
     private static final double SLOT0_KI = 0;
     private static final double SLOT0_KD = 0;

@@ -29,13 +29,12 @@ public class Shooter extends SubsystemBase
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;   // 60
     private static final double SENSOR_TO_MECHANISM_RATIO = 1;
 
-    // Initial velocity-loop tuning for 1:1 Kraken X60 shooter.
-    private static final double SLOT0_KS = 0.2; // TODO - tune
+    private static final double SLOT0_KS = 0.0; // TODO - tune
     private static final double SLOT0_KA = 0.0; // TODO - tune
     // 12V / 100 RPS = 0.12 V per RPS (approx for Kraken X60 at 1:1)
     private static final double SLOT0_KV = 0.12; // TODO - tune
-    private static final double SLOT0_KP = 0.1; // TODO - tune
-    private static final double SLOT0_KI = 0.0; // TODO - tune
+    private static final double SLOT0_KP = 0.5; // TODO - tune    // 0.75 seemed ok - not oscillations, 1 ok, anything higher is hella oscillations
+    private static final double SLOT0_KI = 0.1; // TODO - tune
     private static final double SLOT0_KD = 0.0; // TODO - tune
 
     private static final double PEAK_FORWARD_VOLTS = 16.0;

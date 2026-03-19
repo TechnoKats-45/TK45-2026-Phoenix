@@ -80,7 +80,7 @@ public class RobotContainer
     private void initializeTuningDashboard()
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
-        SmartDashboard.putBoolean(Test_Shoot_Key, false);
+        SmartDashboard.putBoolean(Test_Shoot_Key, true);    // Sets defualt for tunring on / off auto aim. TRUE = OFF by default
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
@@ -185,8 +185,7 @@ public class RobotContainer
             MaxSpeed,
             MaxAngularRate
         ));
-        autoAimTrigger.onFalse(Commands.runOnce(() -> s_shooter.stopShooting(), s_shooter));
-        
+                
         driver.rightTrigger().whileTrue(new SequentialCommandGroup    // Run the floor and feeder to shoot balls while right trigger held.
             (
                 Commands.runOnce(() -> s_feeder.setFeederPercent(-1)),
