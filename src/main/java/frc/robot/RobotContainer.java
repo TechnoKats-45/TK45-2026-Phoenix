@@ -12,6 +12,7 @@ import com.ctre.phoenix6.swerve.SwerveRequest;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -29,6 +30,7 @@ import frc.robot.subsystems.*;
 
 import frc.robot.generated.TunerConstants;
 
+import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
 
 public class RobotContainer 
@@ -69,11 +71,14 @@ public class RobotContainer
     private final Feeder s_feeder = new Feeder();
     private final Floor s_floor = new Floor();
     private final Vision s_vision = new Vision(drivetrain);
+    private final SendableChooser<Command> autoChooser;
 
     public RobotContainer() 
     {
         initializeTuningDashboard();
         registerNamedCommands();
+        autoChooser = AutoBuilder.buildAutoChooser("Right-Mid-Right-Score");
+        SmartDashboard.putData("Auto Chooser", autoChooser);
         configureBindings();
     }
 
@@ -86,6 +91,7 @@ public class RobotContainer
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
         SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
+        SmartDashboard.putData("Stow Intake", Commands.runOnce(s_intake::stow, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Zero Hood", Commands.runOnce(s_hood::zeroToMinimumAngle, s_hood).ignoringDisable(true));
     }
 
@@ -231,22 +237,8 @@ public class RobotContainer
 
     public Command getAutonomousCommand() 
     {
-        // Simple drive forward auton
-        final var idle = new SwerveRequest.Idle();
-        return Commands.sequence(
-            // Reset our field centric heading to match the robot
-            // facing away from our alliance station wall (0 deg).
-            drivetrain.runOnce(() -> drivetrain.seedFieldCentric(Rotation2d.kZero)),
-            // Then slowly drive forward (away from us) for 5 seconds.
-            drivetrain.applyRequest(() ->
-                drive.withVelocityX(0.5)
-                    .withVelocityY(0)
-                    .withRotationalRate(0)
-            )
-            .withTimeout(5.0),
-            // Finally idle for the rest of auton
-            drivetrain.applyRequest(() -> idle)
-        );
+        Command selectedAuto = autoChooser.getSelected();
+        return selectedAuto != null ? selectedAuto : Commands.none();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,7 +254,16 @@ public class RobotContainer
             new WaitCommand(1.5),
             Commands.runOnce(() -> 
                 s_intake.setIntakePercent(Constants.Intake.INTAKE_SPEED)
+                )
             )
+        );
+
+        NamedCommands.registerCommand(
+        "DeployIntake",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> 
+                s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)
+                )
             )
         );
 
@@ -303,6 +304,35 @@ public class RobotContainer
             )
         )
         );
+        
+        NamedCommands.registerCommand(
+        "Shoot8",
+        Commands.parallel(
+            new AutoAim(
+                drivetrain,
+                s_vision,
+                s_hood,
+                s_shooter,
+                () -> 0.0,
+                () -> 0.0,
+                driver.getHID(),
+                MaxSpeed,
+                MaxAngularRate
+            ),
+            Commands.sequence(
+                new WaitCommand(1.5),
+                new AutoFeed(s_floor, s_feeder, 5)
+            )
+        )
+        );
+
+        NamedCommands.registerCommand(
+            "StopShooter",
+            new SequentialCommandGroup(
+                Commands.runOnce(() -> s_shooter.stop()
+                )
+            )
+            );
 
         NamedCommands.registerCommand(
         "StopHopperDump",
