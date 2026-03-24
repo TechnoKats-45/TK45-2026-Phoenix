@@ -30,8 +30,8 @@ public class AutoIntake extends Command
     @Override
     public void execute() 
     {
-        intake.setIntakePercent(.5);
-        floor.setFloorPercent(1);
+        intake.setIntakePercent(.75);
+        floor.setFloorPercent(.5);
         feeder.setFeederPercent(-0.25);
     }
 

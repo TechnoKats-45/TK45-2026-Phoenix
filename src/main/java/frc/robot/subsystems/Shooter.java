@@ -31,10 +31,10 @@ public class Shooter extends SubsystemBase
     // Suggested starting values for VelocityTorqueCurrentFOC.
     // These gains are in torque-current units, so they are much smaller than velocity-voltage gains.
     private static final double SLOT0_KS = 3.0;
-    private static final double SLOT0_KP = 10.0;
+    private static final double SLOT0_KP = 14.5;    // 12 low, 14 GOOD, 14.75 HIGH
     private static final double SLOT0_KI = 0.0;
     private static final double SLOT0_KD = 0.0;
-    private static final double SLOT0_KV = 0.0;
+    private static final double SLOT0_KV = 0.26;
     private static final double SLOT0_KA = 0.0;
     private static final double REQUEST_FEEDFORWARD_AMPS = 2.0;
     private static final double FOLLOWER_STATUS_UPDATE_HZ = 100.0;

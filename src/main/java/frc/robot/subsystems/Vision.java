@@ -54,7 +54,7 @@ public class Vision extends SubsystemBase {
     // Vision fusion tuning constants (hardcoded; not configurable via SmartDashboard)
     private static final double MAX_TRANSLATION_JUMP_M = 6.0;
     private static final double MAX_ROTATION_JUMP_DEG = 120.0;
-    private static final boolean ENABLE_POSE_FUSION = true;
+    private static final boolean ENABLE_POSE_FUSION = false;    // TODO - ENABLE THIS TO GET VISION
     private static final boolean ENABLE_INITIAL_POSE_SEED = true;
     private static final boolean USE_VISION_ROTATION = false;
     private static final double MAX_MEASUREMENT_AGE_SEC = 0.5;

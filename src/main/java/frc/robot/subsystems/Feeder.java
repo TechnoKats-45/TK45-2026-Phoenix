@@ -112,7 +112,7 @@ public class Feeder extends SubsystemBase
                         .withKD(SLOT0_KD));
 
         shooterConfigs.MotorOutput.Inverted = invertedValue;
-        shooterConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        shooterConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         shooterConfigs.Voltage
                 .withPeakForwardVoltage(Volts.of(PEAK_FORWARD_VOLTS))
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
