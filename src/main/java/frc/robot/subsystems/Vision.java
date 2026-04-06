@@ -30,7 +30,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
 
-public class Vision extends SubsystemBase {
+public class Vision extends SubsystemBase 
+{
     public record HubObservation(
             Translation2d robotToHubFrontMeters,
             double rangeToHubCenterMeters,
@@ -54,11 +55,13 @@ public class Vision extends SubsystemBase {
     // Vision fusion tuning constants (hardcoded; not configurable via SmartDashboard)
     private static final double MAX_TRANSLATION_JUMP_M = 6.0;
     private static final double MAX_ROTATION_JUMP_DEG = 120.0;
-    private static final boolean ENABLE_POSE_FUSION = false;    // TODO - ENABLE THIS TO GET VISION
+    private static final boolean ENABLE_POSE_FUSION = true;
     private static final boolean ENABLE_INITIAL_POSE_SEED = true;
-    private static final boolean USE_VISION_ROTATION = false;
+    private static final boolean USE_VISION_ROTATION = true;
     private static final double MAX_MEASUREMENT_AGE_SEC = 0.5;
     private static final double FIELD_BOUNDS_MARGIN_M = 0.3;
+    private static final double BUMP_HARD_RESET_TRANSLATION_ERROR_M = 1.0;
+    private static final int BUMP_HARD_RESET_TAG_COUNT = 2;
 
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
@@ -246,7 +249,7 @@ public class Vision extends SubsystemBase {
             }
 
             if (!poseSeededFromVision && ENABLE_INITIAL_POSE_SEED) {
-                drivetrain.resetPose(estimatedPose);
+                drivetrain.resetPoseFromVision(estimatedPose, USE_VISION_ROTATION);
                 poseSeededFromVision = true;
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", "");
@@ -268,9 +271,14 @@ public class Vision extends SubsystemBase {
 
             Pose2d fusedPose = USE_VISION_ROTATION
                     ? estimatedPose
-                    : new Pose2d(estimatedPose.getTranslation(), drivetrain.getState().Pose.getRotation());
+                    : drivetrain.useGyroHeadingForPose(estimatedPose);
             Matrix<N3, N1> stdDevs = getVisionStdDevs(result);
-            drivetrain.addVisionMeasurement(fusedPose, estimateTimestamp, stdDevs);
+
+            if (shouldHardResetDuringBump(result, transJump)) {
+                drivetrain.resetPoseFromVision(fusedPose, USE_VISION_ROTATION);
+            } else {
+                drivetrain.addVisionMeasurement(fusedPose, estimateTimestamp, stdDevs);
+            }
             SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
             SmartDashboard.putString("Vision/" + label + "/RejectReason", "");
 
@@ -293,10 +301,23 @@ public class Vision extends SubsystemBase {
 
     private Matrix<N3, N1> getVisionStdDevs(PhotonPipelineResult result) {
         int tagCount = result.targets.size();
+        if (drivetrain.isTraversingBump()) {
+            if (tagCount >= 2) {
+                return VecBuilder.fill(0.1, 0.1, 0.3);
+            }
+            return VecBuilder.fill(0.2, 0.2, 0.5);
+        }
+
         if (tagCount >= 2) {
             return VecBuilder.fill(0.2, 0.2, 0.5);
         }
         return VecBuilder.fill(0.6, 0.6, 1.0);
+    }
+
+    private boolean shouldHardResetDuringBump(PhotonPipelineResult result, double translationJumpMeters) {
+        return drivetrain.isTraversingBump()
+                && result.targets.size() >= BUMP_HARD_RESET_TAG_COUNT
+                && translationJumpMeters >= BUMP_HARD_RESET_TRANSLATION_ERROR_M;
     }
 
     private boolean isInFieldBounds(Pose2d pose) {
@@ -338,7 +359,7 @@ public class Vision extends SubsystemBase {
             return false;
         }
 
-        drivetrain.resetPose(pose);
+        drivetrain.resetPoseFromVision(pose, USE_VISION_ROTATION);
         poseSeededFromVision = true;
         SmartDashboard.putBoolean("Vision/LastResetUsedVision", true);
         SmartDashboard.putNumber("Vision/LastResetX", pose.getX());

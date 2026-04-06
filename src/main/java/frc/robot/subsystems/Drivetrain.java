@@ -17,14 +17,18 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -44,6 +48,14 @@ import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem 
 {
     private static final double kSimLoopPeriod = 0.004; // 4 ms
+    private static final double BUMP_TILT_ENTER_DEG = 8.0;
+    private static final double BUMP_TILT_EXIT_DEG = 5.0;
+    private static final double BUMP_RECOVERY_HOLD_SEC = 0.35;
+    private static final Matrix<N3, N1> NORMAL_STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, 0.1);
+    private static final Matrix<N3, N1> BUMP_STATE_STD_DEVS = VecBuilder.fill(0.9, 0.9, 0.2);
+    private static final Matrix<N3, N1> NORMAL_VISION_STD_DEVS = VecBuilder.fill(0.6, 0.6, 1.0);
+    private static final Matrix<N3, N1> BUMP_VISION_STD_DEVS = VecBuilder.fill(0.2, 0.2, 0.5);
+
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
 
@@ -53,6 +65,8 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private static final Rotation2d kRedAlliancePerspectiveRotation = Rotation2d.k180deg;
     /* Keep track if we've ever applied the operator perspective before or not */
     private boolean m_hasAppliedOperatorPerspective = false;
+    private boolean bumpTraversalActive = false;
+    private double bumpRecoveryDeadlineSec = 0.0;
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -91,6 +105,8 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, modules);
+        setStateStdDevs(NORMAL_STATE_STD_DEVS);
+        setVisionMeasurementStdDevs(NORMAL_VISION_STD_DEVS);
         if (Utils.isSimulation()) {
             startSimThread();
         }
@@ -116,6 +132,8 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, odometryUpdateFrequency, modules);
+        setStateStdDevs(NORMAL_STATE_STD_DEVS);
+        setVisionMeasurementStdDevs(NORMAL_VISION_STD_DEVS);
         if (Utils.isSimulation()) {
             startSimThread();
         }
@@ -149,6 +167,8 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
+        setStateStdDevs(NORMAL_STATE_STD_DEVS);
+        setVisionMeasurementStdDevs(NORMAL_VISION_STD_DEVS);
         if (Utils.isSimulation()) {
             startSimThread();
         }
@@ -207,6 +227,36 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
             });
         }
 
+        updateBumpTraversalState();
+    }
+
+    private void updateBumpTraversalState() {
+        double tiltMagnitudeDeg = Math.hypot(getRollDeg(), getPitchDeg());
+        double nowSec = Timer.getFPGATimestamp();
+
+        if (tiltMagnitudeDeg >= BUMP_TILT_ENTER_DEG) {
+            bumpRecoveryDeadlineSec = nowSec + BUMP_RECOVERY_HOLD_SEC;
+            setBumpTraversalActive(true);
+        } else if (bumpTraversalActive
+                && tiltMagnitudeDeg <= BUMP_TILT_EXIT_DEG
+                && nowSec >= bumpRecoveryDeadlineSec) {
+            setBumpTraversalActive(false);
+        }
+
+        SmartDashboard.putNumber("Drivetrain/RollDeg", getRollDeg());
+        SmartDashboard.putNumber("Drivetrain/PitchDeg", getPitchDeg());
+        SmartDashboard.putNumber("Drivetrain/TiltMagnitudeDeg", tiltMagnitudeDeg);
+        SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
+    }
+
+    private void setBumpTraversalActive(boolean active) {
+        if (bumpTraversalActive == active) {
+            return;
+        }
+
+        bumpTraversalActive = active;
+        setStateStdDevs(active ? BUMP_STATE_STD_DEVS : NORMAL_STATE_STD_DEVS);
+        setVisionMeasurementStdDevs(active ? BUMP_VISION_STD_DEVS : NORMAL_VISION_STD_DEVS);
     }
     private void startSimThread() {
         m_lastSimTime = Utils.getCurrentTimeSeconds();
@@ -302,6 +352,36 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
     public double getGyroYawDeg() {
         return getPigeon2().getYaw().getValueAsDouble();
+    }
+
+    public double getRollDeg() {
+        return getPigeon2().getRoll().getValueAsDouble();
+    }
+
+    public double getPitchDeg() {
+        return getPigeon2().getPitch().getValueAsDouble();
+    }
+
+    public Rotation2d getRawHeading() {
+        return getState().RawHeading;
+    }
+
+    public boolean isTraversingBump() {
+        return bumpTraversalActive;
+    }
+
+    public Pose2d useGyroHeadingForPose(Pose2d pose) {
+        return new Pose2d(pose.getTranslation(), getState().Pose.getRotation());
+    }
+
+    public void resetPoseFromVision(Pose2d visionPose, boolean useVisionRotation) {
+        if (useVisionRotation) {
+            resetPose(visionPose);
+            return;
+        }
+
+        Translation2d translation = visionPose.getTranslation();
+        resetTranslation(translation);
     }
     
     private void configureAutoBuilder() 
