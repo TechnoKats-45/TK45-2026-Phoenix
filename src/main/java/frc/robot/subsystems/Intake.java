@@ -52,8 +52,8 @@ public class Intake extends SubsystemBase
     private static final MotorAlignmentValue RIGHT_FOLLOW_PIVOT_ALIGNMENT = MotorAlignmentValue.Opposed;
 
     //Roller Vars
-    private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 120.0;   // 120
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 60.0;    // 60
+    private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 80.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 40.0;
     private static final double SENSOR_TO_MECHANISM_RATIO_ROLLER = 1.0;
     private static final double PEAK_FORWARD_VOLTS_ROLLER = 16.0;
     private static final double PEAK_REVERSE_VOLTS_ROLLER = -16.0;

@@ -27,8 +27,8 @@ public class Floor extends SubsystemBase
 {
     private static final int CONFIG_RETRIES = Constants.CONFIG_RETRIES;
     //Variables
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 80.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 40.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 2.0; //TODO TUNE
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;

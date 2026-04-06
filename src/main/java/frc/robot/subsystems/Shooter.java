@@ -24,8 +24,8 @@ import frc.robot.Constants;
 
 public class Shooter extends SubsystemBase 
 {
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 80.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 40.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1.0;
 
     // Suggested starting values for VelocityTorqueCurrentFOC.
