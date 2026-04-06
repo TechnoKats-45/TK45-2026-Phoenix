@@ -51,6 +51,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private static final double BUMP_TILT_ENTER_DEG = 8.0;
     private static final double BUMP_TILT_EXIT_DEG = 5.0;
     private static final double BUMP_RECOVERY_HOLD_SEC = 0.35;
+    private static final double VISION_ROTATION_RECOVERY_SEC = 1.0;
     private static final Matrix<N3, N1> NORMAL_STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, 0.1);
     private static final Matrix<N3, N1> BUMP_STATE_STD_DEVS = VecBuilder.fill(0.9, 0.9, 0.2);
     private static final Matrix<N3, N1> NORMAL_VISION_STD_DEVS = VecBuilder.fill(0.6, 0.6, 1.0);
@@ -67,6 +68,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private boolean m_hasAppliedOperatorPerspective = false;
     private boolean bumpTraversalActive = false;
     private double bumpRecoveryDeadlineSec = 0.0;
+    private double visionRotationRecoveryDeadlineSec = 0.0;
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -236,6 +238,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
         if (tiltMagnitudeDeg >= BUMP_TILT_ENTER_DEG) {
             bumpRecoveryDeadlineSec = nowSec + BUMP_RECOVERY_HOLD_SEC;
+            visionRotationRecoveryDeadlineSec = nowSec + VISION_ROTATION_RECOVERY_SEC;
             setBumpTraversalActive(true);
         } else if (bumpTraversalActive
                 && tiltMagnitudeDeg <= BUMP_TILT_EXIT_DEG
@@ -247,6 +250,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SmartDashboard.putNumber("Drivetrain/PitchDeg", getPitchDeg());
         SmartDashboard.putNumber("Drivetrain/TiltMagnitudeDeg", tiltMagnitudeDeg);
         SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
+        SmartDashboard.putBoolean("Drivetrain/AllowVisionRotation", shouldUseVisionRotation());
     }
 
     private void setBumpTraversalActive(boolean active) {
@@ -368,6 +372,10 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
     public boolean isTraversingBump() {
         return bumpTraversalActive;
+    }
+
+    public boolean shouldUseVisionRotation() {
+        return bumpTraversalActive || Timer.getFPGATimestamp() <= visionRotationRecoveryDeadlineSec;
     }
 
     public Pose2d useGyroHeadingForPose(Pose2d pose) {

@@ -141,6 +141,8 @@ public class Constants
         // Match these exactly to PhotonVision camera names on the coprocessor.
         public static final String LEFT_CAMERA_NAME = "Photon_Left";
         public static final String RIGHT_CAMERA_NAME = "Photon_Right";
+        public static final String SIDE_LEFT_CAMERA_NAME = "Photon_Side_Left";
+        public static final String SIDE_RIGHT_CAMERA_NAME = "Photon_Side_Right";
 
         // While these remain non-positive, AutoAim will use any visible fiducial target
         // from the front shooter cameras before falling back to pose-only aiming.
@@ -174,6 +176,26 @@ public class Constants
                         0.0,
                         Math.toRadians(10.0),
                         Math.toRadians(165.0)));
+
+        public static final Transform3d ROBOT_TO_SIDE_LEFT_CAMERA = new Transform3d(
+                new Translation3d(
+                        -1.885676 * 0.0254,
+                        13.345555 * 0.0254,
+                        8.589373 * 0.0254),
+                new Rotation3d(
+                        Math.toRadians(0.0),
+                        Math.toRadians(10.0),
+                        Math.toRadians(90.0)));
+
+        public static final Transform3d ROBOT_TO_SIDE_RIGHT_CAMERA = new Transform3d(
+                new Translation3d(
+                        -1.885676 * 0.0254,
+                        -13.345555 * 0.0254,
+                        8.589373 * 0.0254),
+                new Rotation3d(
+                        Math.toRadians(0.0),
+                        Math.toRadians(10.0),
+                        Math.toRadians(-90.0)));
     }
 }
 

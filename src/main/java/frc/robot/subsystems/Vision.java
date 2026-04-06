@@ -1,7 +1,9 @@
 package frc.robot.subsystems;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.photonvision.EstimatedRobotPose;
@@ -19,10 +21,10 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -30,8 +32,15 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.FieldConstants;
 
-public class Vision extends SubsystemBase 
-{
+public class Vision extends SubsystemBase {
+    private record CameraPoseSource(
+            String label,
+            PhotonCamera camera,
+            PhotonPoseEstimator estimator,
+            Transform3d robotToCamera,
+            boolean useForHubObservation) {
+    }
+
     public record HubObservation(
             Translation2d robotToHubFrontMeters,
             double rangeToHubCenterMeters,
@@ -40,24 +49,17 @@ public class Vision extends SubsystemBase
     }
 
     private final Drivetrain drivetrain;
-    private final PhotonCamera leftCamera;
-    private final PhotonCamera rightCamera;
-    private final PhotonPoseEstimator leftEstimator;
-    private final PhotonPoseEstimator rightEstimator;
-    private int leftFuseCount = 0;
-    private int rightFuseCount = 0;
+    private final List<CameraPoseSource> cameraPoseSources;
+    private final Map<String, Optional<PhotonPipelineResult>> latestResults = new HashMap<>();
+    private final Map<String, Double> lastAcceptedTimestamps = new HashMap<>();
+    private final Map<String, Integer> fuseCounts = new HashMap<>();
     private boolean poseSeededFromVision = false;
-    private double lastLeftAcceptedTimestampSec = -1.0;
-    private double lastRightAcceptedTimestampSec = -1.0;
-    private Optional<PhotonPipelineResult> lastLeftResult = Optional.empty();
-    private Optional<PhotonPipelineResult> lastRightResult = Optional.empty();
 
     // Vision fusion tuning constants (hardcoded; not configurable via SmartDashboard)
     private static final double MAX_TRANSLATION_JUMP_M = 6.0;
     private static final double MAX_ROTATION_JUMP_DEG = 120.0;
     private static final boolean ENABLE_POSE_FUSION = true;
     private static final boolean ENABLE_INITIAL_POSE_SEED = true;
-    private static final boolean USE_VISION_ROTATION = true;
     private static final double MAX_MEASUREMENT_AGE_SEC = 0.5;
     private static final double FIELD_BOUNDS_MARGIN_M = 0.3;
     private static final double BUMP_HARD_RESET_TRANSLATION_ERROR_M = 1.0;
@@ -66,30 +68,57 @@ public class Vision extends SubsystemBase
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
 
-        leftCamera = new PhotonCamera(Constants.Vision.LEFT_CAMERA_NAME);
-        rightCamera = new PhotonCamera(Constants.Vision.RIGHT_CAMERA_NAME);
-
         AprilTagFieldLayout layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-        leftEstimator = new PhotonPoseEstimator(
-                layout,
-                PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-                Constants.Vision.ROBOT_TO_LEFT_CAMERA);
-        leftEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
-
-        rightEstimator = new PhotonPoseEstimator(
-                layout,
-                PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
-                Constants.Vision.ROBOT_TO_RIGHT_CAMERA);
-        rightEstimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+        cameraPoseSources = List.of(
+                createCameraSource(
+                        "Left",
+                        Constants.Vision.LEFT_CAMERA_NAME,
+                        Constants.Vision.ROBOT_TO_LEFT_CAMERA,
+                        layout,
+                        true),
+                createCameraSource(
+                        "Right",
+                        Constants.Vision.RIGHT_CAMERA_NAME,
+                        Constants.Vision.ROBOT_TO_RIGHT_CAMERA,
+                        layout,
+                        true),
+                createCameraSource(
+                        "SideLeft",
+                        Constants.Vision.SIDE_LEFT_CAMERA_NAME,
+                        Constants.Vision.ROBOT_TO_SIDE_LEFT_CAMERA,
+                        layout,
+                        false),
+                createCameraSource(
+                        "SideRight",
+                        Constants.Vision.SIDE_RIGHT_CAMERA_NAME,
+                        Constants.Vision.ROBOT_TO_SIDE_RIGHT_CAMERA,
+                        layout,
+                        false));
 
         SmartDashboard.putBoolean("Vision/LastResetUsedVision", false);
     }
 
+    private CameraPoseSource createCameraSource(
+            String label,
+            String cameraName,
+            Transform3d robotToCamera,
+            AprilTagFieldLayout layout,
+            boolean useForHubObservation) {
+        PhotonCamera camera = new PhotonCamera(cameraName);
+        PhotonPoseEstimator estimator = new PhotonPoseEstimator(
+                layout,
+                PoseStrategy.MULTI_TAG_PNP_ON_COPROCESSOR,
+                robotToCamera);
+        estimator.setMultiTagFallbackStrategy(PoseStrategy.LOWEST_AMBIGUITY);
+        return new CameraPoseSource(label, camera, estimator, robotToCamera, useForHubObservation);
+    }
+
     @Override
     public void periodic() {
-        processCamera(leftCamera, leftEstimator, "Left");
-        processCamera(rightCamera, rightEstimator, "Right");
+        for (CameraPoseSource source : cameraPoseSources) {
+            processCamera(source);
+        }
 
         Optional<Alliance> alliance = DriverStation.getAlliance();
         Pose3d hubCenter = FieldConstants.Hub.getCenterForAllianceOrNearest(alliance, drivetrain.getState().Pose);
@@ -111,10 +140,15 @@ public class Vision extends SubsystemBase
 
     public Optional<HubObservation> getHubObservation(Optional<Alliance> alliance) {
         List<Translation2d> robotToTargets = new ArrayList<>();
-        lastLeftResult.ifPresent(result ->
-                collectHubTargets(result, Constants.Vision.ROBOT_TO_LEFT_CAMERA, alliance, robotToTargets));
-        lastRightResult.ifPresent(result ->
-                collectHubTargets(result, Constants.Vision.ROBOT_TO_RIGHT_CAMERA, alliance, robotToTargets));
+
+        for (CameraPoseSource source : cameraPoseSources) {
+            if (!source.useForHubObservation()) {
+                continue;
+            }
+
+            getLatestStoredResult(source.label()).ifPresent(result ->
+                    collectHubTargets(result, source.robotToCamera(), alliance, robotToTargets));
+        }
 
         if (robotToTargets.isEmpty()) {
             return Optional.empty();
@@ -180,8 +214,12 @@ public class Vision extends SubsystemBase
         return false;
     }
 
-    private void processCamera(PhotonCamera camera, PhotonPoseEstimator estimator, String label) {
+    private void processCamera(CameraPoseSource source) {
+        String label = source.label();
+        PhotonCamera camera = source.camera();
+        PhotonPoseEstimator estimator = source.estimator();
         List<PhotonPipelineResult> results = camera.getAllUnreadResults();
+
         SmartDashboard.putNumber("Vision/" + label + "/UnreadResults", results.size());
         estimator.setReferencePose(drivetrain.getState().Pose);
 
@@ -192,11 +230,7 @@ public class Vision extends SubsystemBase
         }
 
         PhotonPipelineResult latest = results.get(results.size() - 1);
-        if ("Left".equals(label)) {
-            lastLeftResult = Optional.of(latest);
-        } else {
-            lastRightResult = Optional.of(latest);
-        }
+        setLatestStoredResult(label, latest);
 
         for (PhotonPipelineResult result : results) {
             SmartDashboard.putBoolean("Vision/" + label + "/HasTarget", result.hasTargets());
@@ -228,8 +262,7 @@ public class Vision extends SubsystemBase
                 continue;
             }
 
-            double lastAcceptedTs = "Left".equals(label) ? lastLeftAcceptedTimestampSec : lastRightAcceptedTimestampSec;
-            if (estimateTimestamp <= lastAcceptedTs) {
+            if (estimateTimestamp <= getLastAcceptedTimestamp(label)) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", "StaleTimestamp");
                 continue;
@@ -248,8 +281,11 @@ public class Vision extends SubsystemBase
                 continue;
             }
 
+            boolean useVisionRotation = drivetrain.shouldUseVisionRotation();
+            SmartDashboard.putBoolean("Vision/" + label + "/UseVisionRotation", useVisionRotation);
+
             if (!poseSeededFromVision && ENABLE_INITIAL_POSE_SEED) {
-                drivetrain.resetPoseFromVision(estimatedPose, USE_VISION_ROTATION);
+                drivetrain.resetPoseFromVision(estimatedPose, useVisionRotation);
                 poseSeededFromVision = true;
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", "");
@@ -257,11 +293,9 @@ public class Vision extends SubsystemBase
             }
 
             Pose2d currentPose = drivetrain.getState().Pose;
-            double maxTransJump = MAX_TRANSLATION_JUMP_M;
-            double maxRotJumpDeg = MAX_ROTATION_JUMP_DEG;
             double transJump = estimatedPose.getTranslation().getDistance(currentPose.getTranslation());
             double rotJumpDeg = Math.abs(estimatedPose.getRotation().minus(currentPose.getRotation()).getDegrees());
-            if (transJump > maxTransJump || rotJumpDeg > maxRotJumpDeg) {
+            if (transJump > MAX_TRANSLATION_JUMP_M || rotJumpDeg > MAX_ROTATION_JUMP_DEG) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putNumber("Vision/" + label + "/RejectedTransJumpM", transJump);
                 SmartDashboard.putNumber("Vision/" + label + "/RejectedRotJumpDeg", rotJumpDeg);
@@ -269,33 +303,28 @@ public class Vision extends SubsystemBase
                 continue;
             }
 
-            Pose2d fusedPose = USE_VISION_ROTATION
+            Pose2d fusedPose = useVisionRotation
                     ? estimatedPose
                     : drivetrain.useGyroHeadingForPose(estimatedPose);
             Matrix<N3, N1> stdDevs = getVisionStdDevs(result);
 
             if (shouldHardResetDuringBump(result, transJump)) {
-                drivetrain.resetPoseFromVision(fusedPose, USE_VISION_ROTATION);
+                drivetrain.resetPoseFromVision(fusedPose, useVisionRotation);
             } else {
                 drivetrain.addVisionMeasurement(fusedPose, estimateTimestamp, stdDevs);
             }
+
             SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
             SmartDashboard.putString("Vision/" + label + "/RejectReason", "");
-
             SmartDashboard.putNumber("Vision/" + label + "/TagCount", result.targets.size());
             SmartDashboard.putNumber("Vision/" + label + "/X", estimatedPose.getX());
             SmartDashboard.putNumber("Vision/" + label + "/Y", estimatedPose.getY());
             SmartDashboard.putNumber("Vision/" + label + "/ThetaDeg", estimatedPose.getRotation().getDegrees());
             SmartDashboard.putNumber("Vision/" + label + "/TimestampSec", estimateTimestamp);
-            if ("Left".equals(label)) {
-                leftFuseCount++;
-                SmartDashboard.putNumber("Vision/Left/FuseCount", leftFuseCount);
-                lastLeftAcceptedTimestampSec = estimateTimestamp;
-            } else {
-                rightFuseCount++;
-                SmartDashboard.putNumber("Vision/Right/FuseCount", rightFuseCount);
-                lastRightAcceptedTimestampSec = estimateTimestamp;
-            }
+
+            incrementFuseCount(label);
+            SmartDashboard.putNumber("Vision/" + label + "/FuseCount", getFuseCount(label));
+            setLastAcceptedTimestamp(label, estimateTimestamp);
         }
     }
 
@@ -328,24 +357,10 @@ public class Vision extends SubsystemBase
     }
 
     public boolean resetPoseFromVision() {
-        var leftEstimate = getLatestEstimate(leftCamera, leftEstimator);
-        var rightEstimate = getLatestEstimate(rightCamera, rightEstimator);
-
         Optional<EstimatedRobotPose> best = Optional.empty();
-        if (leftEstimate.isPresent() && rightEstimate.isPresent()) {
-            int leftTags = leftEstimate.get().targetsUsed.size();
-            int rightTags = rightEstimate.get().targetsUsed.size();
-            if (leftTags != rightTags) {
-                best = leftTags > rightTags ? leftEstimate : rightEstimate;
-            } else {
-                best = leftEstimate.get().timestampSeconds >= rightEstimate.get().timestampSeconds
-                        ? leftEstimate
-                        : rightEstimate;
-            }
-        } else if (leftEstimate.isPresent()) {
-            best = leftEstimate;
-        } else if (rightEstimate.isPresent()) {
-            best = rightEstimate;
+
+        for (CameraPoseSource source : cameraPoseSources) {
+            best = pickBetterEstimate(best, getLatestEstimate(source.camera(), source.estimator()));
         }
 
         if (best.isEmpty()) {
@@ -359,7 +374,7 @@ public class Vision extends SubsystemBase
             return false;
         }
 
-        drivetrain.resetPoseFromVision(pose, USE_VISION_ROTATION);
+        drivetrain.resetPoseFromVision(pose, drivetrain.shouldUseVisionRotation());
         poseSeededFromVision = true;
         SmartDashboard.putBoolean("Vision/LastResetUsedVision", true);
         SmartDashboard.putNumber("Vision/LastResetX", pose.getX());
@@ -382,4 +397,54 @@ public class Vision extends SubsystemBase
         estimator.setReferencePose(drivetrain.getState().Pose);
         return estimator.update(latest);
     }
+
+    private Optional<EstimatedRobotPose> pickBetterEstimate(
+            Optional<EstimatedRobotPose> currentBest,
+            Optional<EstimatedRobotPose> candidate) {
+        if (candidate.isEmpty()) {
+            return currentBest;
+        }
+
+        if (currentBest.isEmpty()) {
+            return candidate;
+        }
+
+        int candidateTags = candidate.get().targetsUsed.size();
+        int bestTags = currentBest.get().targetsUsed.size();
+        if (candidateTags > bestTags) {
+            return candidate;
+        }
+
+        if (candidateTags == bestTags
+                && candidate.get().timestampSeconds >= currentBest.get().timestampSeconds) {
+            return candidate;
+        }
+
+        return currentBest;
+    }
+
+    private Optional<PhotonPipelineResult> getLatestStoredResult(String label) {
+        return latestResults.getOrDefault(label, Optional.empty());
+    }
+
+    private void setLatestStoredResult(String label, PhotonPipelineResult result) {
+        latestResults.put(label, Optional.of(result));
+    }
+
+    private double getLastAcceptedTimestamp(String label) {
+        return lastAcceptedTimestamps.getOrDefault(label, -1.0);
+    }
+
+    private void setLastAcceptedTimestamp(String label, double timestampSec) {
+        lastAcceptedTimestamps.put(label, timestampSec);
+    }
+
+    private void incrementFuseCount(String label) {
+        fuseCounts.put(label, getFuseCount(label) + 1);
+    }
+
+    private int getFuseCount(String label) {
+        return fuseCounts.getOrDefault(label, 0);
+    }
+
 }
