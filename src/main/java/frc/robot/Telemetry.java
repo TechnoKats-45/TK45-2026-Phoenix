@@ -2,6 +2,8 @@ package frc.robot;
 
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
+import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.path.PathPlannerPath;
 
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -15,11 +17,17 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StructArrayPublisher;
 import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import org.json.simple.parser.ParseException;
 
 public class Telemetry {
     private final double MaxSpeed;
@@ -63,6 +71,9 @@ public class Telemetry {
     private final DoubleArrayPublisher bluePassingZonePub = table.getDoubleArrayTopic("bluePassingZone").publish();
     private final DoubleArrayPublisher redScoringZonePub = table.getDoubleArrayTopic("redScoringZone").publish();
     private final DoubleArrayPublisher redPassingZonePub = table.getDoubleArrayTopic("redPassingZone").publish();
+    private final DoubleArrayPublisher trajectoryPub = table.getDoubleArrayTopic("trajectory").publish();
+    private final DoubleArrayPublisher startingPosePub = table.getDoubleArrayTopic("startingPose").publish();
+    private final StringPublisher selectedAutoNamePub = table.getStringTopic("selectedAutoName").publish();
     private final StringPublisher fieldTypePub = table.getStringTopic(".type").publish();
 
     /* Mechanisms to represent the swerve module states */
@@ -124,6 +135,10 @@ public class Telemetry {
             new Pose3d(FieldConstants.FIELD_LENGTH, FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
             new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), FieldConstants.FIELD_WIDTH, 0.0, Pose3d.kZero.getRotation()),
             new Pose3d(FieldConstants.Hub.RED_CENTER.getX(), 0.0, 0.0, Pose3d.kZero.getRotation()));
+    private String displayedAutoName = "";
+    private boolean displayedAutoFlipped = false;
+    private double[] displayedAutoArray = new double[0];
+    private double[] displayedStartingPoseArray = new double[0];
 
     private static double[] posesToFieldObjectArray(Pose3d... poses) {
         double[] packed = new double[poses.length * 3];
@@ -133,6 +148,61 @@ public class Telemetry {
             packed[i * 3 + 2] = poses[i].getRotation().toRotation2d().getDegrees();
         }
         return packed;
+    }
+
+    private static double[] posesToFieldObjectArray(List<Pose2d> poses) {
+        double[] packed = new double[poses.size() * 3];
+        for (int i = 0; i < poses.size(); i++) {
+            packed[i * 3] = poses.get(i).getX();
+            packed[i * 3 + 1] = poses.get(i).getY();
+            packed[i * 3 + 2] = poses.get(i).getRotation().getDegrees();
+        }
+        return packed;
+    }
+
+    public void setSelectedAuto(String autoName, boolean flipForAlliance) {
+        String normalizedAutoName = autoName == null ? "" : autoName;
+        if (!Objects.equals(displayedAutoName, normalizedAutoName) || displayedAutoFlipped != flipForAlliance) {
+            displayedAutoName = normalizedAutoName;
+            displayedAutoFlipped = flipForAlliance;
+            displayedAutoArray = loadSelectedAutoArray(normalizedAutoName, flipForAlliance);
+        }
+
+        selectedAutoNamePub.set(displayedAutoName);
+        trajectoryPub.set(displayedAutoArray);
+        startingPosePub.set(displayedStartingPoseArray);
+    }
+
+    private double[] loadSelectedAutoArray(String autoName, boolean flipForAlliance) {
+        if (autoName.isEmpty()) {
+            displayedStartingPoseArray = new double[0];
+            return new double[0];
+        }
+
+        try {
+            List<Pose2d> autoPoses = new ArrayList<>();
+            List<PathPlannerPath> paths = PathPlannerAuto.getPathGroupFromAutoFile(autoName);
+            if (!paths.isEmpty()) {
+                PathPlannerPath firstPath = flipForAlliance ? paths.get(0).flipPath() : paths.get(0);
+                Pose2d startingPose = new Pose2d(
+                    firstPath.getPoint(0).position,
+                    firstPath.getIdealStartingState() != null
+                        ? firstPath.getIdealStartingState().rotation()
+                        : Pose2d.kZero.getRotation());
+                displayedStartingPoseArray = posesToFieldObjectArray(List.of(startingPose));
+            } else {
+                displayedStartingPoseArray = new double[0];
+            }
+
+            for (PathPlannerPath path : paths) {
+                autoPoses.addAll((flipForAlliance ? path.flipPath() : path).getPathPoses());
+            }
+            return posesToFieldObjectArray(autoPoses);
+        } catch (IOException | ParseException | RuntimeException ex) {
+            DriverStation.reportError("Failed to publish selected auto '" + autoName + "'", ex.getStackTrace());
+            displayedStartingPoseArray = new double[0];
+            return new double[0];
+        }
     }
 
     /** Accept the swerve drive state and telemeterize it to SmartDashboard and SignalLogger. */
@@ -169,6 +239,9 @@ public class Telemetry {
         bluePassingZonePub.set(m_bluePassingZoneArray);
         redScoringZonePub.set(m_redScoringZoneArray);
         redPassingZonePub.set(m_redPassingZoneArray);
+        selectedAutoNamePub.set(displayedAutoName);
+        trajectoryPub.set(displayedAutoArray);
+        startingPosePub.set(displayedStartingPoseArray);
 
         /* Telemeterize each module state to a Mechanism2d */
         for (int i = 0; i < 4; ++i) {

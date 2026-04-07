@@ -2,10 +2,12 @@
   "robotWidth": 0.9,
   "robotLength": 0.9,
   "holonomicMode": true,
-  "pathFolders": [
-    "Right-Mid-Right-Score"
+  "pathFolders": [],
+  "autoFolders": [
+    "Just Preload",
+    "Mid Rush",
+    "Preload Then Mid"
   ],
-  "autoFolders": [],
   "defaultMaxVel": 1.0,
   "defaultMaxAccel": 3.0,
   "defaultMaxAngVel": 540.0,

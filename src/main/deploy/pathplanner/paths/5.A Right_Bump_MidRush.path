@@ -1,0 +1,166 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.60333870967742,
+        "y": 2.974395161290323
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 4.546911290322581,
+        "y": 2.696443548387098
+      },
+      "isLocked": false,
+      "linkedName": "Start_Right_Bump_Hub_MidRush"
+    },
+    {
+      "anchor": {
+        "x": 5.885467741935483,
+        "y": 2.0088790322580654
+      },
+      "prevControl": {
+        "x": 5.380766129032258,
+        "y": 2.396548387096775
+      },
+      "nextControl": {
+        "x": 6.627900213159145,
+        "y": 1.4386048152311939
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.406887096774193,
+        "y": 2.0088790322580654
+      },
+      "prevControl": {
+        "x": 6.953387096774194,
+        "y": 1.7089838709677427
+      },
+      "nextControl": {
+        "x": 7.777904775244581,
+        "y": 2.2542294325368704
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.867701612903225,
+        "y": 3.22308870967742
+      },
+      "prevControl": {
+        "x": 7.848713404417546,
+        "y": 2.651824991717326
+      },
+      "nextControl": {
+        "x": 7.886689821388905,
+        "y": 3.7943524276375142
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.406887096774193,
+        "y": 3.9179677419354846
+      },
+      "prevControl": {
+        "x": 7.648981403728161,
+        "y": 3.85559509937099
+      },
+      "nextControl": {
+        "x": 7.1647927898202255,
+        "y": 3.980340384499979
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 5.885467741935483,
+        "y": 2.974395161290323
+      },
+      "prevControl": {
+        "x": 6.4486854838709675,
+        "y": 3.80825
+      },
+      "nextControl": {
+        "x": 5.503162031535526,
+        "y": 2.408384109529348
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.6890241935483874,
+        "y": 2.974395161290323
+      },
+      "prevControl": {
+        "x": 3.6837983870967745,
+        "y": 2.6232983870967748
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "Shoot_Right_Close"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 1.6412556053811673,
+      "rotationDegrees": 35.703817364707696
+    },
+    {
+      "waypointRelativePos": 2.6031390134529193,
+      "rotationDegrees": 88.28399806725729
+    },
+    {
+      "waypointRelativePos": 3.356502242152461,
+      "rotationDegrees": 123.0093216513948
+    },
+    {
+      "waypointRelativePos": 4.405829596412547,
+      "rotationDegrees": -143.10041685904926
+    },
+    {
+      "waypointRelativePos": 4.890134529147952,
+      "rotationDegrees": 179.00992251954162
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [
+    {
+      "fieldPosition": {
+        "x": 0.4,
+        "y": 5.5
+      },
+      "rotationOffset": -140.0,
+      "minWaypointRelativePos": 0.07380073800738003,
+      "maxWaypointRelativePos": 0.75,
+      "name": "Bump Cross Turn"
+    }
+  ],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 1.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -150.0
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 0.0
+  },
+  "useDefaultConstraints": true
+}

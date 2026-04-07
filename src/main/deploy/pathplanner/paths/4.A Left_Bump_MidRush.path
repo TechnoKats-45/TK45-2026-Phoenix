@@ -1,0 +1,182 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.6837983870967745,
+        "y": 5.095604838709678
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 4.6837983870967745,
+        "y": 5.095604838709678
+      },
+      "isLocked": false,
+      "linkedName": "Start_Left_Bump_Hub_MidRush"
+    },
+    {
+      "anchor": {
+        "x": 6.221935483870968,
+        "y": 6.141580645161291
+      },
+      "prevControl": {
+        "x": 5.330961375164481,
+        "y": 5.6875265320704855
+      },
+      "nextControl": {
+        "x": 6.982645161290322,
+        "y": 6.529249999999999
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.377629032258064,
+        "y": 6.141580645161291
+      },
+      "prevControl": {
+        "x": 7.158193548387097,
+        "y": 6.353701612903226
+      },
+      "nextControl": {
+        "x": 7.5970645161290316,
+        "y": 5.929459677419356
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.831129032258065,
+        "y": 4.949314516129033
+      },
+      "prevControl": {
+        "x": 7.714096774193548,
+        "y": 5.439387096774194
+      },
+      "nextControl": {
+        "x": 7.948161290322583,
+        "y": 4.459241935483872
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.545862903225807,
+        "y": 4.093516129032259
+      },
+      "prevControl": {
+        "x": 7.747012096774195,
+        "y": 4.276379032258065
+      },
+      "nextControl": {
+        "x": 7.344713709677419,
+        "y": 3.9106532258064526
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 6.507201612903226,
+        "y": 4.291008064516129
+      },
+      "prevControl": {
+        "x": 6.956423058913637,
+        "y": 3.892505168861732
+      },
+      "nextControl": {
+        "x": 6.053701612903226,
+        "y": 4.693306451612903
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 5.695290322580645,
+        "y": 5.176064516129032
+      },
+      "prevControl": {
+        "x": 5.997534254828062,
+        "y": 4.888783154784953
+      },
+      "nextControl": {
+        "x": 4.956524193548387,
+        "y": 5.878258064516129
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.5427338709677425,
+        "y": 5.095604838709678
+      },
+      "prevControl": {
+        "x": 3.4277903225806456,
+        "y": 5.234580645161292
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "Shoot_Left_Close"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 1.5381165919282518,
+      "rotationDegrees": -39.28628138447307
+    },
+    {
+      "waypointRelativePos": 2.8408071748878934,
+      "rotationDegrees": -81.86144158514806
+    },
+    {
+      "waypointRelativePos": 3.6020179372197316,
+      "rotationDegrees": -137.44572126844014
+    },
+    {
+      "waypointRelativePos": 4.551569506726438,
+      "rotationDegrees": 158.7100474662781
+    },
+    {
+      "waypointRelativePos": 5.846412556053778,
+      "rotationDegrees": 161.77627753266893
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [
+    {
+      "fieldPosition": {
+        "x": 0.4,
+        "y": 5.5
+      },
+      "rotationOffset": -170.0,
+      "minWaypointRelativePos": 0.0,
+      "maxWaypointRelativePos": 0.7662976629766298,
+      "name": "Bump Cross Turn"
+    }
+  ],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 1.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": 150.0
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 0.0
+  },
+  "useDefaultConstraints": true
+}

@@ -1,0 +1,142 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 2.6890241935483874,
+        "y": 2.974395161290323
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.3765887096774194,
+        "y": 2.7037580645161303
+      },
+      "isLocked": false,
+      "linkedName": "Shoot_Right_Close"
+    },
+    {
+      "anchor": {
+        "x": 5.570943548387097,
+        "y": 2.162483870967743
+      },
+      "prevControl": {
+        "x": 4.795604838709679,
+        "y": 2.162483870967743
+      },
+      "nextControl": {
+        "x": 6.32522587133436,
+        "y": 2.162483870967743
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 7.311798387096774,
+        "y": 2.162483870967743
+      },
+      "prevControl": {
+        "x": 6.84366935483871,
+        "y": 1.9357338709677427
+      },
+      "nextControl": {
+        "x": 7.746919464755807,
+        "y": 2.373245642958838
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 8.04325,
+        "y": 3.5376129032258072
+      },
+      "prevControl": {
+        "x": 8.021969314176248,
+        "y": 2.842443832983175
+      },
+      "nextControl": {
+        "x": 8.065193548387096,
+        "y": 4.254435483870968
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 6.4486854838709675,
+        "y": 3.5376129032258072
+      },
+      "prevControl": {
+        "x": 6.875392864273782,
+        "y": 4.032346097895738
+      },
+      "nextControl": {
+        "x": 5.439282258064517,
+        "y": 2.3672903225806454
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.6890241935483874,
+        "y": 2.974395161290323
+      },
+      "prevControl": {
+        "x": 3.9690645161290323,
+        "y": 2.7037580645161303
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "Shoot_Right_Close"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 1.4910313901345318,
+      "rotationDegrees": 13.636028480140151
+    },
+    {
+      "waypointRelativePos": 3.0100896860986444,
+      "rotationDegrees": 113.08863012922916
+    },
+    {
+      "waypointRelativePos": 3.5313901345291243,
+      "rotationDegrees": -162.90658222676504
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [
+    {
+      "fieldPosition": {
+        "x": 0.4,
+        "y": 5.5
+      },
+      "rotationOffset": -160.0,
+      "minWaypointRelativePos": 0.3259532595325957,
+      "maxWaypointRelativePos": 1.1746617466174671,
+      "name": "Cross Bump Turn"
+    }
+  ],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 1.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -150.0
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": -150.0
+  },
+  "useDefaultConstraints": true
+}

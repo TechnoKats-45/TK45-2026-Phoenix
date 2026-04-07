@@ -8,10 +8,12 @@ import static edu.wpi.first.units.Units.*;
 
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Timer;
@@ -105,6 +107,8 @@ public class RobotContainer
 
     public void periodic()
     {
+        updateSelectedAutoPreview();
+
         if (!SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false)) 
         {
             return;
@@ -131,6 +135,18 @@ public class RobotContainer
 
         SmartDashboard.putNumber("Tuning/Applied Shooter RPS", shooterRps);
         SmartDashboard.putNumber("Tuning/Applied Hood Angle", hoodAngle);
+    }
+
+    private void updateSelectedAutoPreview()
+    {
+        Command selectedAuto = autoChooser.getSelected();
+        String selectedAutoName = selectedAuto instanceof PathPlannerAuto pathPlannerAuto
+            ? pathPlannerAuto.getName()
+            : "";
+        boolean flipForAlliance = DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
+            == DriverStation.Alliance.Red;
+
+        logger.setSelectedAuto(selectedAutoName, flipForAlliance);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
