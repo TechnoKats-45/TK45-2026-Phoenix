@@ -73,6 +73,8 @@ public class Constants
         public static final double MAX_SPEED_RPS = 100.0;
         public static final double SPEED_TOLERANCE_RPS = 0.5;
 
+        public static final double SHOOTER_SPEED_CLOSE = 60.0; // TODO - TUNE 
+
         public record ShotProfile(double hoodDeg, double speedRps) {}
 
         public static final TreeMap<Double, ShotProfile> DISTANCE_ANGLE_SPEED = new TreeMap<>();

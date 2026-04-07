@@ -161,6 +161,59 @@
               "period": 0.06,
               "sort_options": false
             }
+          },
+          {
+            "title": "Can Shoot",
+            "x": 1664.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Match/CanShoot",
+              "period": 0.06,
+              "data_type": "boolean"
+            }
+          },
+          {
+            "title": "Match Time",
+            "x": 896.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Match/MatchTimeRemainingSec",
+              "period": 0.06,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Period Time",
+            "x": 1152.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Match/ScoringPeriodRemainingSec",
+              "period": 0.06,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Scoring Period",
+            "x": 1408.0,
+            "y": 640.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Match/ScoringPeriod",
+              "period": 0.06,
+              "data_type": "string",
+              "show_submit_button": false
+            }
           }
         ]
       }

@@ -39,6 +39,17 @@ import com.pathplanner.lib.auto.NamedCommands;
 
 public class RobotContainer 
 {
+    private static final String MATCH_TIME_REMAINING_KEY = "Match/MatchTimeRemainingSec";
+    private static final String MATCH_SCORING_PERIOD_KEY = "Match/ScoringPeriod";
+    private static final String MATCH_PERIOD_TIME_REMAINING_KEY = "Match/ScoringPeriodRemainingSec";
+    private static final String MATCH_ACTIVE_ALLIANCE_KEY = "Match/ActiveScoringAlliance";
+    private static final String MATCH_FIRST_SCORING_ALLIANCE_KEY = "Match/FirstScoringAlliance";
+    private static final String MATCH_FIRST_INACTIVE_ALLIANCE_KEY = "Match/FirstInactiveAlliance";
+    private static final String MATCH_CAN_SHOOT_KEY = "Match/CanShoot";
+    private static final String MATCH_BOTH_CAN_SCORE_KEY = "Match/BothAlliancesCanScore";
+    private static final String MATCH_HAS_GAME_DATA_KEY = "Match/HasGameData";
+    private static final String MATCH_GAME_DATA_KEY = "Match/GameSpecificMessage";
+    private static final String MATCH_ALLIANCE_KEY = "Match/MyAlliance";
     private static final String MANUAL_SHOOTER_ENABLE_KEY = "Tuning/Manual Shooter Mode";
     private static final String AUTO_AIM_DISABLE_KEY = "Auto Aim Disabled (On = Disable)";
     private static final String MANUAL_SHOOTER_SPEED_KEY = "Tuning/Manual Shooter RPS";
@@ -108,6 +119,7 @@ public class RobotContainer
     public void periodic()
     {
         updateSelectedAutoPreview();
+        updateMatchTimingDashboard();
 
         if (!SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false)) 
         {
@@ -147,6 +159,164 @@ public class RobotContainer
             == DriverStation.Alliance.Red;
 
         logger.setSelectedAuto(selectedAutoName, flipForAlliance);
+    }
+
+    private void updateMatchTimingDashboard()
+    {
+        double matchTimeRemainingSec = DriverStation.getMatchTime();
+        String gameData = DriverStation.getGameSpecificMessage();
+        var alliance = DriverStation.getAlliance();
+        MatchTimingStatus status = getMatchTimingStatus(matchTimeRemainingSec, alliance, gameData);
+
+        SmartDashboard.putNumber(MATCH_TIME_REMAINING_KEY, matchTimeRemainingSec);
+        SmartDashboard.putString(MATCH_SCORING_PERIOD_KEY, status.scoringPeriod());
+        SmartDashboard.putNumber(MATCH_PERIOD_TIME_REMAINING_KEY, status.periodTimeRemainingSec());
+        SmartDashboard.putString(MATCH_ACTIVE_ALLIANCE_KEY, status.activeScoringAlliance());
+        SmartDashboard.putString(MATCH_FIRST_SCORING_ALLIANCE_KEY, status.firstScoringAlliance());
+        SmartDashboard.putString(MATCH_FIRST_INACTIVE_ALLIANCE_KEY, status.firstInactiveAlliance());
+        SmartDashboard.putBoolean(MATCH_CAN_SHOOT_KEY, status.canShoot());
+        SmartDashboard.putBoolean(MATCH_BOTH_CAN_SCORE_KEY, status.bothAlliancesCanScore());
+        SmartDashboard.putBoolean(MATCH_HAS_GAME_DATA_KEY, !gameData.isEmpty());
+        SmartDashboard.putString(MATCH_GAME_DATA_KEY, gameData.isEmpty() ? "None" : gameData);
+        SmartDashboard.putString(MATCH_ALLIANCE_KEY, alliance.map(Enum::name).orElse("Unknown"));
+    }
+
+    private MatchTimingStatus getMatchTimingStatus(
+        double matchTimeRemainingSec,
+        java.util.Optional<DriverStation.Alliance> alliance,
+        String gameData)
+    {
+        if (DriverStation.isAutonomousEnabled()) {
+            return new MatchTimingStatus(
+                "Auto",
+                Math.max(0.0, matchTimeRemainingSec),
+                "Both",
+                "Unknown",
+                "Unknown",
+                true,
+                true);
+        }
+
+        if (DriverStation.isTeleopEnabled()) {
+            return getTeleopTimingStatus(matchTimeRemainingSec, alliance, gameData);
+        }
+
+        return new MatchTimingStatus(
+            "Disabled",
+            0.0,
+            "None",
+            "Unknown",
+            "Unknown",
+            false,
+            false);
+    }
+
+    private MatchTimingStatus getTeleopTimingStatus(
+        double matchTimeRemainingSec,
+        java.util.Optional<DriverStation.Alliance> alliance,
+        String gameData)
+    {
+        if (matchTimeRemainingSec > 130.0) {
+            return new MatchTimingStatus(
+                "Transition Shift",
+                matchTimeRemainingSec - 130.0,
+                "Both",
+                getFirstScoringAlliance(gameData),
+                getFirstInactiveAlliance(gameData),
+                true,
+                true);
+        }
+
+        if (matchTimeRemainingSec > 105.0) {
+            return buildAllianceShiftStatus("Shift 1", matchTimeRemainingSec - 105.0, true, alliance, gameData);
+        }
+
+        if (matchTimeRemainingSec > 80.0) {
+            return buildAllianceShiftStatus("Shift 2", matchTimeRemainingSec - 80.0, false, alliance, gameData);
+        }
+
+        if (matchTimeRemainingSec > 55.0) {
+            return buildAllianceShiftStatus("Shift 3", matchTimeRemainingSec - 55.0, true, alliance, gameData);
+        }
+
+        if (matchTimeRemainingSec > 30.0) {
+            return buildAllianceShiftStatus("Shift 4", matchTimeRemainingSec - 30.0, false, alliance, gameData);
+        }
+
+        return new MatchTimingStatus(
+            "End Game",
+            Math.max(0.0, matchTimeRemainingSec),
+            "Both",
+            getFirstScoringAlliance(gameData),
+            getFirstInactiveAlliance(gameData),
+            true,
+            true);
+    }
+
+    private MatchTimingStatus buildAllianceShiftStatus(
+        String shiftName,
+        double periodTimeRemainingSec,
+        boolean firstScoringAllianceActive,
+        java.util.Optional<DriverStation.Alliance> alliance,
+        String gameData)
+    {
+        String firstScoringAlliance = getFirstScoringAlliance(gameData);
+        String firstInactiveAlliance = getFirstInactiveAlliance(gameData);
+        String activeAlliance = firstScoringAllianceActive
+            ? firstScoringAlliance
+            : oppositeAllianceName(firstScoringAlliance);
+        boolean canShoot = alliance.isPresent()
+            && activeAlliance.equalsIgnoreCase(alliance.get().name());
+
+        if (activeAlliance.equals("Unknown")) {
+            canShoot = false;
+        }
+
+        return new MatchTimingStatus(
+            shiftName,
+            periodTimeRemainingSec,
+            activeAlliance,
+            firstScoringAlliance,
+            firstInactiveAlliance,
+            canShoot,
+            false);
+    }
+
+    private String getFirstInactiveAlliance(String gameData)
+    {
+        return switch (gameData) {
+            case "R" -> "Red";
+            case "B" -> "Blue";
+            default -> "Unknown";
+        };
+    }
+
+    private String getFirstScoringAlliance(String gameData)
+    {
+        return switch (gameData) {
+            case "R" -> "Blue";
+            case "B" -> "Red";
+            default -> "Unknown";
+        };
+    }
+
+    private String oppositeAllianceName(String allianceName)
+    {
+        return switch (allianceName) {
+            case "Red" -> "Blue";
+            case "Blue" -> "Red";
+            default -> "Unknown";
+        };
+    }
+
+    private record MatchTimingStatus(
+        String scoringPeriod,
+        double periodTimeRemainingSec,
+        String activeScoringAlliance,
+        String firstScoringAlliance,
+        String firstInactiveAlliance,
+        boolean canShoot,
+        boolean bothAlliancesCanScore) {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -215,7 +385,7 @@ public class RobotContainer
         }));
 
         driver.leftTrigger().whileTrue(Commands.run(() -> { // NORMAL SHOT
-            s_shooter.shoot(60);    // was 69 in match 72
+            s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE);    // was 69 in match 72
             s_hood.setAngle(Constants.Hood.MIN_ANGLE);
             driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
         }, s_shooter, s_hood).finallyDo((interrupted) -> {
@@ -306,19 +476,6 @@ public class RobotContainer
     public void registerNamedCommands()
     {
         NamedCommands.registerCommand(
-        "DeployAndIntake",
-        new SequentialCommandGroup(
-            Commands.runOnce(() -> 
-                s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)
-            ),
-            new WaitCommand(1.5),
-            Commands.runOnce(() -> 
-                s_intake.setIntakePercent(Constants.Intake.INTAKE_SPEED)
-                )
-            )
-        );
-
-        NamedCommands.registerCommand(
         "DeployIntake",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
@@ -328,84 +485,46 @@ public class RobotContainer
         );
 
         NamedCommands.registerCommand(
-        "StowAndStopIntake",
+        "DeployIntakeAndStartIntaking",
         new SequentialCommandGroup(
             Commands.runOnce(() -> 
-            s_intake.setIntakePercent(0)
+                s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN)
             ),
-            new WaitCommand(0.2),
-            Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED)
+            Commands.runOnce(() -> 
+                s_intake.setIntakePercent(Constants.Intake.INTAKE_SPEED)
                 )
             )
         );
 
         NamedCommands.registerCommand(
-        "AutoFeed",
-        new AutoFeed(s_floor, s_feeder, 1.0)
+        "ShootPreloadFromStaticShooter",
+        Commands.parallel(
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
+            Commands.sequence(
+                new WaitCommand(1.5),                       // TODO - Adjust shooter startup time
+                new AutoFeed(s_floor, s_feeder, 3)  // TODO - Adjust period that shooter shoots for
+            )
+        )
         );
 
         NamedCommands.registerCommand(
-        "ShootAllHopper",
+        "ShootFullHopper",
         Commands.parallel(
-            new AutoAim(
-                drivetrain,
-                s_vision,
-                s_hood,
-                s_shooter,
-                () -> 0.0,
-                () -> 0.0,
-                driver.getHID(),
-                MaxSpeed,
-                MaxAngularRate
-            ),
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
-                new WaitCommand(0.5),
-                new AutoFeed(s_floor, s_feeder, 5)
+                new WaitCommand(0),                       // TODO - Adjust shooter startup time (Set to 0 since it should already be running)
+                new AutoFeed(s_floor, s_feeder, 5)  // TODO - Adjust period that shooter shoots for
             )
         )
         );
         
         NamedCommands.registerCommand(
-        "Shoot8",
-        Commands.parallel(
-            Commands.runOnce(() -> s_shooter.shoot(69)),
-            Commands.sequence(
-                new WaitCommand(1.5),
-                new AutoFeed(s_floor, s_feeder, 3)
-            )
-        )
-        );
-
-        NamedCommands.registerCommand(
-        "ShootALL",
-        Commands.parallel(
-            Commands.runOnce(() -> s_shooter.shoot(69)),
-            Commands.sequence(
-                new WaitCommand(1.5),
-                new AutoFeed(s_floor, s_feeder, 8)
-            )
-        )
-        );
-
-        NamedCommands.registerCommand(
-            "StopShooter",
-            new SequentialCommandGroup(
-                Commands.runOnce(() -> s_shooter.stop()
-                )
-            )
-            );
-
-        NamedCommands.registerCommand(
-        "StopHopperDump",
+        "SpoolShooterToShootingSpeed",
         new SequentialCommandGroup(
-            Commands.runOnce(() -> 
-            s_floor.stop()
-            ),
-            Commands.runOnce(() -> s_feeder.setFeederSpeed(0)),
-            new WaitCommand(1), 
-            Commands.runOnce(() -> s_shooter.shoot(0))
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)) // TODO - Adjust shooter speed if needed
             )
         );
+
     }
     
     //////////////////////////////////////////////////////////////////////////////////////////////////
