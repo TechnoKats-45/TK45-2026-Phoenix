@@ -5,15 +5,45 @@
     "data": {
       "commands": [
         {
+          "type": "named",
+          "data": {
+            "name": "DeployIntake"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "3.A Right_Bump_Preload"
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "ShootPreloadFromStaticShooter"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "3.B Right_Preload_To_Mid"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "ShootFullHopper"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "StopIntaking"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "StopShooter"
           }
         }
       ]

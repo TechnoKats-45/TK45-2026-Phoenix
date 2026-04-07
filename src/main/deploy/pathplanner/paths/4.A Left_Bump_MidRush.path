@@ -186,7 +186,30 @@
       "name": "Bump Cross Turn"
     }
   ],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "DeployIntakeAndStartIntaking",
+      "waypointRelativePos": 0.6629766297662975,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "DeployIntakeAndStartIntaking"
+        }
+      }
+    },
+    {
+      "name": "SpoolShooterToShootingSpeed",
+      "waypointRelativePos": 6.0012300123001,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "SpoolShooterToShootingSpeed"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,

@@ -84,8 +84,8 @@
         "y": 5.095604838709678
       },
       "prevControl": {
-        "x": 3.5228790322580683,
-        "y": 4.828625000000001
+        "x": 3.574080645161291,
+        "y": 5.146806451612904
       },
       "nextControl": null,
       "isLocked": false,
@@ -146,7 +146,30 @@
       "name": "Cross Bump Turn"
     }
   ],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "DeployIntakeAndStartIntaking",
+      "waypointRelativePos": 0.7749077490774907,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "DeployIntakeAndStartIntaking"
+        }
+      }
+    },
+    {
+      "name": "SpoolShooterToShootingSpeed",
+      "waypointRelativePos": 3.7023370233702337,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "SpoolShooterToShootingSpeed"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,

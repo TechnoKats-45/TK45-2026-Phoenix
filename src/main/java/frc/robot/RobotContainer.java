@@ -497,6 +497,15 @@ public class RobotContainer
         );
 
         NamedCommands.registerCommand(
+        "StopIntaking",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> 
+                s_intake.stop()
+                )
+            )
+        );
+
+        NamedCommands.registerCommand(
         "ShootPreloadFromStaticShooter",
         Commands.parallel(
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
@@ -525,6 +534,12 @@ public class RobotContainer
             )
         );
 
+        NamedCommands.registerCommand(
+        "StopShooter",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> s_shooter.stop())
+            )
+        );
     }
     
     //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -5,9 +5,33 @@
     "data": {
       "commands": [
         {
+          "type": "named",
+          "data": {
+            "name": "DeployIntake"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "4.A Left_Bump_MidRush"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "ShootFullHopper"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "StopIntaking"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "StopShooter"
           }
         }
       ]

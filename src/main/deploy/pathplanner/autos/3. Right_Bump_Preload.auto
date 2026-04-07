@@ -5,9 +5,33 @@
     "data": {
       "commands": [
         {
+          "type": "named",
+          "data": {
+            "name": "DeployIntake"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "3.A Right_Bump_Preload"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "ShootPreloadFromStaticShooter"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "StopIntaking"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "StopShooter"
           }
         }
       ]
