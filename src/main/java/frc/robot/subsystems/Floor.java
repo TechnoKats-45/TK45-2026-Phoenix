@@ -27,7 +27,7 @@ public class Floor extends SubsystemBase
     //Variables
     private static final double STATOR_CURRENT_LIMIT_AMPS = 80.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 40.0;
-    private static final double SENSOR_TO_MECHANISM_RATIO = 2.0; //TODO TUNE
+    private static final double SENSOR_TO_MECHANISM_RATIO = 60/18; //TODO TUNE
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
     private static final double MAX_FLOOR_SPEED_RPS = 100.0; // 100 is max rps for Kraken X60
