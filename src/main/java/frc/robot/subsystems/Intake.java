@@ -35,7 +35,7 @@ public class Intake extends SubsystemBase
     private static final double MM_ACCEL_RPS2_PIVOT = 10; // TODO TUNE
     private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 128.0; // TODO TUNE
     private static final double PEAK_FORWARD_VOLTS_PIVOT= 16.0;
-    private static final double PEAK_REVERSE_VOLTS_PIVOT= -16.0; 
+    private static final double PEAK_REVERSE_VOLTS_PIVOT= - 16.0; 
     private double currentAngleSetPoint = 0.0;   
 
     // PIVOT PID
@@ -156,6 +156,10 @@ public class Intake extends SubsystemBase
         SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
+    public void stow() 
+    {
+        setAngle(Constants.Intake.PIVOT_ANGLE_UP_STOWED);
+    }
 
     public void setBrakeMode(boolean enableBrake)
     {
@@ -168,8 +172,14 @@ public class Intake extends SubsystemBase
         runFeed(percent);
     }
 
+    public void setIntakePercent(double percentOutput) 
+    {
+        double clamped = MathUtil.clamp(percentOutput, -1.0, 1.0);
+        setSpeed(clamped * MAX_INTAKE_SPEED_RPS);
+    }
 
-    private void configurePivotMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
+    private void configurePivotMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
+    {
         TalonFXConfiguration intakePivotConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
                         .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS_PIVOT)

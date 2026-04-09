@@ -9,16 +9,12 @@ import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -26,23 +22,24 @@ import frc.robot.Constants;
 public class Hood extends SubsystemBase 
 {
     private static final int CONFIG_RETRIES = Constants.CONFIG_RETRIES;
+    private static final double POSITION_SIGN = -1.0;
 
     //VARS
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
-    private static final double MM_CRUISE_RPS = 1; // TODO TUNE
-    private static final double MM_ACCEL_RPS2 = 10; // TODO TUNE
-    private static final double SENSOR_TO_MECHANISM_RATIO = 2.0; // TODO TUNE
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 20.0;
+    private static final double MM_CRUISE_RPS = 1;
+    private static final double MM_ACCEL_RPS2 = 10;
+    private static final double SENSOR_TO_MECHANISM_RATIO = 40;
     private static final double PEAK_FORWARD_VOLTS= 16.0;
     private static final double PEAK_REVERSE_VOLTS= -16.0; 
     private double currentAngleSetPoint = 0.0; 
     
     //PID
-    private static final double SLOT0_KS = 0.0; // TODO TUNE
-    private static final double SLOT0_KV = 0.0; // TODO TUNE
-    private static final double SLOT0_KP = 1.0; // TODO TUNE
-    private static final double SLOT0_KI = 0.0; // TODO TUNE
-    private static final double SLOT0_KD = 1.0; // TODO TUNE
+    private static final double SLOT0_KS = 0.0;
+    private static final double SLOT0_KV = 0.0;
+    private static final double SLOT0_KP = 0.1;
+    private static final double SLOT0_KI = 0.0;
+    private static final double SLOT0_KD = 0.0;
 
     private final TalonFX hood_motor; 
     private final MotionMagicVoltage motionMagicVoltage = new MotionMagicVoltage(0);
@@ -50,30 +47,47 @@ public class Hood extends SubsystemBase
 
     public Hood() 
     {
-        hood_motor = new TalonFX(Constants.CAN_ID.HOOD,Constants.CAN_BUS.CANIVORE);
+        hood_motor = new TalonFX(Constants.CAN_ID.HOOD, Constants.CAN_BUS.CANIVORE);
         configureMotor(hood_motor, HOOD_MOTOR_INVERTED, "Hood Motor");
+        zeroToMinimumAngle();
     }
 
     public void zeroEncoder()
     {
         hood_motor.setPosition(0.0);
+        currentAngleSetPoint = 0.0;
+    }
+
+    public void zeroToMinimumAngle()
+    {
+        hood_motor.setPosition(toMotorPosition(Constants.Hood.HOOD_ANGLE_DOWN));
+        currentAngleSetPoint = Constants.Hood.HOOD_ANGLE_DOWN;
     }
     public void setAngle(double angle)
     {
         currentAngleSetPoint = angle;
-        hood_motor.setControl(motionMagicVoltage.withPosition(angle));
+        hood_motor.setControl(motionMagicVoltage.withPosition(toMotorPosition(angle)));
         SmartDashboard.putNumber("Hood Set Point", angle);
     }
 
     public double getAngle()
     {
-        return hood_motor.getPosition().getValueAsDouble();
+        return fromMotorPosition(hood_motor.getPosition().getValueAsDouble());
     }
 
     public boolean isAligned()
     {
         return Math.abs(getAngle() - currentAngleSetPoint) <= Constants.Hood.ANGLE_TOLERANCE_DEGREES;
-    
+    }
+
+    private double toMotorPosition(double angle)
+    {
+        return POSITION_SIGN * angle;
+    }
+
+    private double fromMotorPosition(double motorPosition)
+    {
+        return POSITION_SIGN * motorPosition;
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) {
@@ -96,7 +110,7 @@ public class Hood extends SubsystemBase
                         .withKD(SLOT0_KD));
 
         floorConfigs.MotorOutput.Inverted = invertedValue;
-        floorConfigs.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        floorConfigs.MotorOutput.NeutralMode = NeutralModeValue.Brake;
         floorConfigs.Voltage
                 .withPeakForwardVoltage(Volts.of(PEAK_FORWARD_VOLTS))
                 .withPeakReverseVoltage(Volts.of(PEAK_REVERSE_VOLTS));
@@ -114,10 +128,11 @@ public class Hood extends SubsystemBase
         }
     }
 
-    public void printDiagnostics() {
-        SmartDashboard.putNumber("Hood Current Angle", getAngle());
-        SmartDashboard.putNumber("Hood Angle Setpoint", currentAngleSetPoint);
-        SmartDashboard.putBoolean("Hood Is Aligned", isAligned());
-        SmartDashboard.putNumber("Hood Current", hood_motor.getSupplyCurrent().getValueAsDouble());
+    public void printDiagnostics()
+    {
+        SmartDashboard.putNumber("Hood Angle", getAngle());
+        SmartDashboard.putNumber("Hood Set Point", currentAngleSetPoint);
+        SmartDashboard.putBoolean("Hood Is At Angle", isAligned());
+        SmartDashboard.putNumber("Hood Current Draw Amps", hood_motor.getSupplyCurrent().getValueAsDouble());
     }
 }
