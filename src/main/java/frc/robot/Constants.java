@@ -129,6 +129,7 @@ public class Constants
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
         public static final double FLOOR_SPEED = 0.5; // TODO - TUNE
         public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
+        public static final double AUTO_FEED_SPEED = 0.5;
     }
     
     public class Feeder 
@@ -136,6 +137,7 @@ public class Constants
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
         public static final double FEEDER_SPEED = 0.5; // TODO - TUNE
         public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
+        public static final double AUTO_FEED_SPEED = 1.0;
     }
 
     public class Vision

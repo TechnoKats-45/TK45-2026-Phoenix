@@ -111,6 +111,7 @@ public class RobotContainer
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
         SmartDashboard.putBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
+        SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, true);
         SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Stow Intake", Commands.runOnce(s_intake::stow, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Zero Hood", Commands.runOnce(s_hood::zeroToMinimumAngle, s_hood).ignoringDisable(true));
@@ -343,57 +344,6 @@ public class RobotContainer
         
         drivetrain.registerTelemetry(logger::telemeterize);
 
-        // Assign Driver Controls:
-        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
-        driver.start().onTrue(Commands.runOnce(() -> s_vision.resetPoseFromVision(), s_vision));
-        /*
-        driver.a().onTrue(Commands.runOnce(() -> {
-            double down = Constants.Intake.PIVOT_ANGLE_DOWN;
-            double stowed = Constants.Intake.PIVOT_ANGLE_UP_STOWED;
-            double midpoint = (down + stowed) / 2.0;
-            if (s_intake.getAngle() <= midpoint) {
-                s_intake.setAngle(down);
-            } else {
-                s_intake.setAngle(stowed);
-            }
-        }, s_intake));
-        */
-
-        /*
-        /*
-        var autoAimTrigger = driver.leftTrigger();
-        autoAimTrigger.whileTrue(new AutoAim(     // Auto aims swerve, hood, and shooter speed while left trigger held.
-            drivetrain,
-            s_vision,
-            s_hood,
-            s_shooter,
-            driver::getLeftY,
-            driver::getLeftX,
-            driver.getHID(),
-            MaxSpeed,
-            MaxAngularRate
-        ));
-        */
-
-        driver.leftBumper().whileTrue(Commands.run(() -> {  // LONG SHOT
-            s_shooter.shoot(70);    
-            s_hood.setAngle(Constants.Hood.MIN_ANGLE);
-            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
-        }, s_shooter, s_hood).finallyDo((interrupted) -> {
-            s_shooter.stop();
-            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
-        }));
-
-        driver.leftTrigger().whileTrue(Commands.run(() -> { // NORMAL SHOT
-            s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE);    // was 69 in match 72
-            s_hood.setAngle(Constants.Hood.MIN_ANGLE);
-            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
-        }, s_shooter, s_hood).finallyDo((interrupted) -> {
-            s_shooter.stop();
-            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
-        }));
-
-                
         Command feederPulse = Commands.run(() -> {
             feederPulseEnabled = SmartDashboard.getBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
             if (!feederPulseEnabled) {
@@ -421,16 +371,36 @@ public class RobotContainer
             s_feeder.stop();
         });
 
+        // Assign Driver Controls:
+        driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
+        driver.start().onTrue(Commands.runOnce(() -> s_vision.resetPoseFromVision(), s_vision));
+
+        driver.leftBumper().whileTrue(Commands.run(() -> {  // LONG SHOT
+            s_shooter.shoot(70);    
+            s_hood.setAngle(Constants.Hood.MIN_ANGLE);
+            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
+        }, s_shooter, s_hood).finallyDo((interrupted) -> {
+            s_shooter.stop();
+            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
+        }));
+
+        driver.leftTrigger().whileTrue(Commands.run(() -> { // NORMAL SHOT
+            s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE);    // was 69 in match 72
+            s_hood.setAngle(Constants.Hood.MIN_ANGLE);
+            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
+        }, s_shooter, s_hood).finallyDo((interrupted) -> {
+            s_shooter.stop();
+            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
+        }));
+
         driver.rightTrigger().whileTrue(Commands.parallel(    // Run the floor and pulse/continuous feeder while right trigger held.
-            Commands.run(() -> s_floor.setDumbSpeed(.5), s_floor),
+            Commands.run(() -> s_floor.setDumbSpeed(.5), s_floor),  // TODO - try setfloorpercent instead of setdumb
             feederPulse
         ));
-        driver.rightTrigger().onFalse(new ParallelCommandGroup
-            (
+        driver.rightTrigger().onFalse(new ParallelCommandGroup(
                 Commands.runOnce(() -> s_floor.stop()),
                 Commands.runOnce(() -> s_feeder.stop(), s_feeder)
-            )
-        );
+        ));
 
         driver.rightBumper().toggleOnTrue(new AutoIntake(s_intake, s_floor, s_feeder));   // Toggle the intake and floor to intake balls when right bumper pressed.
         
@@ -511,7 +481,7 @@ public class RobotContainer
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
                 new WaitCommand(1.5),                       // TODO - Adjust shooter startup time
-                new AutoFeed(s_floor, s_feeder, 3)  // TODO - Adjust period that shooter shoots for
+                new AutoFeed(s_intake, s_floor, s_feeder, 3)  // TODO - Adjust period that shooter shoots for
             )
         )
         );
@@ -522,7 +492,7 @@ public class RobotContainer
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
                 new WaitCommand(0),                       // TODO - Adjust shooter startup time (Set to 0 since it should already be running)
-                new AutoFeed(s_floor, s_feeder, 5)  // TODO - Adjust period that shooter shoots for
+                new AutoFeed(s_intake, s_floor, s_feeder, 5)  // TODO - Adjust period that shooter shoots for
             )
         )
         );
