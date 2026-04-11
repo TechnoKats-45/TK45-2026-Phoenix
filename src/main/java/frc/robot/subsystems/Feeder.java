@@ -23,8 +23,10 @@ import frc.robot.Constants;
 
 public class Feeder extends SubsystemBase 
 {
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double DEFAULT_STATOR_CURRENT_LIMIT_AMPS = 120.0;
+    private static final double DEFAULT_SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double INTAKE_REVERSE_STATOR_CURRENT_LIMIT_AMPS = 40.0;
+    private static final double INTAKE_REVERSE_SUPPLY_CURRENT_LIMIT_AMPS = 20.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1.0;
     private static final double MAX_FEEDER_SPEED_RPS = 100.0; // 100 is max rps for Kraken X60
     private static final double SLOT0_KS = 0;
@@ -51,11 +53,33 @@ public class Feeder extends SubsystemBase
     {
         left_feeder = new TalonFX(Constants.CAN_ID.LEFT_FEEDER, Constants.CAN_BUS.CANIVORE);
         right_feeder = new TalonFX(Constants.CAN_ID.RIGHT_FEEDER, Constants.CAN_BUS.CANIVORE);
-        configureMotor(left_feeder, InvertedValue.CounterClockwise_Positive, "Left Feeder");
-        configureMotor(right_feeder, InvertedValue.Clockwise_Positive, "Right Feeder");
+        configureMotor(
+                left_feeder,
+                InvertedValue.CounterClockwise_Positive,
+                "Left Feeder",
+                DEFAULT_STATOR_CURRENT_LIMIT_AMPS,
+                DEFAULT_SUPPLY_CURRENT_LIMIT_AMPS);
+        configureMotor(
+                right_feeder,
+                InvertedValue.Clockwise_Positive,
+                "Right Feeder",
+                DEFAULT_STATOR_CURRENT_LIMIT_AMPS,
+                DEFAULT_SUPPLY_CURRENT_LIMIT_AMPS);
         ensureFollower();
 
         // Initialize feeder-specific components here
+    }
+
+    public void useDefaultCurrentLimits()
+    {
+        applyCurrentLimits(DEFAULT_STATOR_CURRENT_LIMIT_AMPS, DEFAULT_SUPPLY_CURRENT_LIMIT_AMPS);
+    }
+
+    public void useIntakeReverseCurrentLimits()
+    {
+        applyCurrentLimits(
+                INTAKE_REVERSE_STATOR_CURRENT_LIMIT_AMPS,
+                INTAKE_REVERSE_SUPPLY_CURRENT_LIMIT_AMPS);
     }
 
     public void setFeederSpeed(double speedRPS) 
@@ -94,13 +118,36 @@ public class Feeder extends SubsystemBase
         ensureFollower();
     }   
 
-    private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
+    private void applyCurrentLimits(double statorCurrentLimitAmps, double supplyCurrentLimitAmps)
+    {
+        configureMotor(
+                left_feeder,
+                InvertedValue.CounterClockwise_Positive,
+                "Left Feeder",
+                statorCurrentLimitAmps,
+                supplyCurrentLimitAmps);
+        configureMotor(
+                right_feeder,
+                InvertedValue.Clockwise_Positive,
+                "Right Feeder",
+                statorCurrentLimitAmps,
+                supplyCurrentLimitAmps);
+        ensureFollower();
+    }
+
+    private void configureMotor(
+            TalonFX motor,
+            InvertedValue invertedValue,
+            String motorName,
+            double statorCurrentLimitAmps,
+            double supplyCurrentLimitAmps) 
     {
         TalonFXConfiguration shooterConfigs = new TalonFXConfiguration()
                 .withCurrentLimits(new CurrentLimitsConfigs()
-                        .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
-                        .withSupplyCurrentLimit(SUPPLY_CURRENT_LIMIT_AMPS)
-                        .withStatorCurrentLimitEnable(true))
+                        .withStatorCurrentLimit(statorCurrentLimitAmps)
+                        .withSupplyCurrentLimit(supplyCurrentLimitAmps)
+                        .withStatorCurrentLimitEnable(true)
+                        .withSupplyCurrentLimitEnable(true))
                 .withFeedback(new FeedbackConfigs()
                         .withFeedbackSensorSource(FeedbackSensorSourceValue.RotorSensor)
                         .withSensorToMechanismRatio(SENSOR_TO_MECHANISM_RATIO))

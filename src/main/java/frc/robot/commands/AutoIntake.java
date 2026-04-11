@@ -23,14 +23,15 @@ public class AutoIntake extends Command
     @Override
     public void initialize() 
     {
-        intake.setAngle(0); 
+        intake.setAngle(0);
+        feeder.useIntakeReverseCurrentLimits();
     }
 
     @Override
     public void execute() 
     {
         intake.setIntakePercent(.75);
-        floor.setFloorPercent(.5);
+        floor.setFloorPercent(0);
         feeder.setFeederPercent(-0.25);
     }
 
@@ -41,6 +42,7 @@ public class AutoIntake extends Command
         intake.stop();
         floor.stop();
         feeder.stop();
+        feeder.useDefaultCurrentLimits();
     }
 
     @Override

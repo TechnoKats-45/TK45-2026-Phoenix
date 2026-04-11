@@ -31,7 +31,7 @@ public class Intake extends SubsystemBase
 
     private static final double STATOR_CURRENT_LIMIT_AMPS_PIVOT = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS_PIVOT = 60.0;
-    private static final double MM_CRUISE_RPS_PIVOT = 1; // TODO TUNE
+    private static final double MM_CRUISE_RPS_PIVOT = 10; // TODO TUNE
     private static final double MM_ACCEL_RPS2_PIVOT = 10; // TODO TUNE
     private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80 * 1.6; // 80:1 geabox and 25:50 gear ratio
     private static final double PEAK_FORWARD_VOLTS_PIVOT= 16.0;
@@ -41,18 +41,16 @@ public class Intake extends SubsystemBase
     // PIVOT PID
     private static final double SLOT0_KS = 0.0; // TODO TUNE
     private static final double SLOT0_KV = 0.0; // TODO TUNE
-    private static final double SLOT0_KP = 15.0; // TODO TUNE
+    private static final double SLOT0_KP = 15.0; // TODO TUNE   // Was 15
     private static final double SLOT0_KI = 0.0; // TODO TUNE
-    private static final double SLOT0_KD = 1.0; // TODO TUNE
+    private static final double SLOT0_KD = 0; // TODO TUNE
     
     //Pivot Inverted Values TODO TUNE
     private static final InvertedValue PIVOT_INVERTED = InvertedValue.CounterClockwise_Positive; //TODO TUNE
 
-
-
     //Roller Vars
-    private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 30.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 20.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 120;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 60.0;
     private static final double MM_CRUISE_RPS_ROLLER = 50.0; // TODO TUNE
     private static final double MM_ACCEL_RPS2_ROLLER = 100.0; // TODO TUNE
     private static final double SENSOR_TO_MECHANISM_RATIO_ROLLER = 1.75; //TODO TUNE
@@ -65,7 +63,7 @@ public class Intake extends SubsystemBase
     // ROLLERS PID
     private static final double SLOT1_KS = 0.0; //  TODO TUNE
     private static final double SLOT1_KV = 0.0; // TODO TUNE
-    private static final double SLOT1_KP = 100.0; // TODO TUNE
+    private static final double SLOT1_KP = 1.0; // TODO TUNE
     private static final double SLOT1_KI = 0.0; // TODO TUNE
     private static final double SLOT1_KD = 1.0; // TODO TUNE
 

@@ -16,15 +16,13 @@ public class AutoFeed extends Command
     private final Intake intake;
     private final Floor floor;
     private final Feeder feeder;
-    private final double durationSeconds;
     private double startTimeSeconds;
 
-    public AutoFeed(Intake intake, Floor floor, Feeder feeder, double durationSeconds) 
+    public AutoFeed(Intake intake, Floor floor, Feeder feeder) 
     {
         this.intake = intake;
         this.floor = floor;
         this.feeder = feeder;
-        this.durationSeconds = durationSeconds;
 
         addRequirements(intake, floor, feeder);
     }
@@ -47,10 +45,10 @@ public class AutoFeed extends Command
             double elapsedSeconds = Timer.getFPGATimestamp() - startTimeSeconds;
             double cycleSeconds = INTAKE_AGITATION_HALF_UP_SECONDS + INTAKE_AGITATION_DOWN_SECONDS;
             double cycleTimeSeconds = elapsedSeconds % cycleSeconds;
-            double halfwayAngle = (Constants.Intake.PIVOT_ANGLE_DOWN + Constants.Intake.PIVOT_ANGLE_UP_STOWED) / 2.0;
+            double agitationTopAngle = (Constants.Intake.PIVOT_ANGLE_DOWN + Constants.Intake.PIVOT_ANGLE_UP_STOWED) / 4.0 * 3;
 
             if (cycleTimeSeconds < INTAKE_AGITATION_HALF_UP_SECONDS) {
-                intake.setAngle(halfwayAngle);
+                intake.setAngle(agitationTopAngle);
             } else {
                 intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN);
             }
@@ -59,7 +57,8 @@ public class AutoFeed extends Command
         }
 
         floor.setFloorPercent(Constants.Floor.AUTO_FEED_SPEED);
-        feeder.setFeederPercent(Constants.Feeder.AUTO_FEED_SPEED);
+        feeder.setFeederPercent(.25);  //Constants.Feeder.AUTO_FEED_SPEED
+        intake.setIntakePercent(.25);
     }
 
     @Override
@@ -73,6 +72,6 @@ public class AutoFeed extends Command
     @Override
     public boolean isFinished() 
     {
-        return Timer.getFPGATimestamp() - startTimeSeconds >= durationSeconds;
+        return false;
     }
 }

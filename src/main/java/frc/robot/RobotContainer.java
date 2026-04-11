@@ -51,7 +51,7 @@ public class RobotContainer
     private static final String MATCH_GAME_DATA_KEY = "Match/GameSpecificMessage";
     private static final String MATCH_ALLIANCE_KEY = "Match/MyAlliance";
     private static final String MANUAL_SHOOTER_ENABLE_KEY = "Tuning/Manual Shooter Mode";
-    private static final String AUTO_AIM_DISABLE_KEY = "Auto Aim Disabled (On = Disable)";
+    private static final String AUTO_AIM_ENABLED_KEY = "Auto Aim Enabled";
     private static final String MANUAL_SHOOTER_SPEED_KEY = "Tuning/Manual Shooter RPS";
     private static final String MANUAL_HOOD_ANGLE_KEY = "Tuning/Manual Hood Angle";
     private static final String MANUAL_SHOOTER_MAX_KEY = "Tuning/Manual Shooter Max RPS";
@@ -105,13 +105,14 @@ public class RobotContainer
     private void initializeTuningDashboard()
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
-        SmartDashboard.putBoolean(AUTO_AIM_DISABLE_KEY, true);    // TRUE = auto aim disabled by default
+        SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, true);    // FALSE = manual shooter mode by default
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
         SmartDashboard.putBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
-        SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, true);
+        SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, false);
+        SmartDashboard.putBoolean(Drivetrain.TILT_BASED_VISION_UPDATES_ENABLED_KEY, true);
         SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Stow Intake", Commands.runOnce(s_intake::stow, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Zero Hood", Commands.runOnce(s_hood::zeroToMinimumAngle, s_hood).ignoringDisable(true));
@@ -126,7 +127,7 @@ public class RobotContainer
         {
             return;
         }
-        if (!SmartDashboard.getBoolean(AUTO_AIM_DISABLE_KEY, false)) 
+        if (SmartDashboard.getBoolean(AUTO_AIM_ENABLED_KEY, true)) 
         {
             return;
         }
@@ -335,6 +336,12 @@ public class RobotContainer
             )
         );
 
+        /*
+        s_shooter.setDefaultCommand(
+            s_shooter.
+        );
+        */
+
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
         final var idle = new SwerveRequest.Idle();
@@ -344,6 +351,7 @@ public class RobotContainer
         
         drivetrain.registerTelemetry(logger::telemeterize);
 
+        /*
         Command feederPulse = Commands.run(() -> {
             feederPulseEnabled = SmartDashboard.getBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
             if (!feederPulseEnabled) {
@@ -370,11 +378,21 @@ public class RobotContainer
             feederPulseTimer.stop();
             s_feeder.stop();
         });
+        */
 
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
         driver.start().onTrue(Commands.runOnce(() -> s_vision.resetPoseFromVision(), s_vision));
-        driver.y().onTrue(Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN))); 
+        driver.y().onTrue(Commands.runOnce(() -> {
+            double down = Constants.Intake.PIVOT_ANGLE_DOWN;
+            double stowed = Constants.Intake.PIVOT_ANGLE_UP_STOWED;
+            double midpoint = (down + stowed) / 2.0;
+            if (s_intake.getAngle() <= midpoint) {
+                s_intake.setAngle(down);
+            } else {
+                s_intake.setAngle(stowed);
+            }
+        }, s_intake)); 
         driver.leftBumper().whileTrue(Commands.run(() -> {  // LONG SHOT
             s_shooter.shoot(70);    
             s_hood.setAngle(Constants.Hood.MIN_ANGLE);
@@ -384,6 +402,7 @@ public class RobotContainer
             driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
         }));
 
+        /*
         driver.leftTrigger().whileTrue(Commands.run(() -> { // NORMAL SHOT
             s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE);    // was 69 in match 72
             s_hood.setAngle(Constants.Hood.MIN_ANGLE);
@@ -392,10 +411,23 @@ public class RobotContainer
             s_shooter.stop();
             driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
         }));
+        */
+
+        driver.leftTrigger().whileTrue(new AutoAim(
+            drivetrain,
+            s_vision,
+            s_hood,
+            s_shooter,
+            driver::getLeftY,
+            driver::getLeftX,
+            driver.getHID(),
+            MaxSpeed,
+            MaxAngularRate
+        )); // Auto aim while left trigger held.
 
         driver.rightTrigger().whileTrue(Commands.parallel(    // Run the floor and pulse/continuous feeder while right trigger held.
-            Commands.run(() -> s_floor.setDumbSpeed(.5), s_floor),  // TODO - try setfloorpercent instead of setdumb
-            feederPulse
+            //Commands.run(() -> s_floor.setDumbSpeed(.5), s_floor)  // TODO - try setfloorpercent instead of setdumb
+            new AutoFeed(s_intake, s_floor, s_feeder)
         ));
         driver.rightTrigger().onFalse(new ParallelCommandGroup(
                 Commands.runOnce(() -> s_floor.stop()),
@@ -428,8 +460,8 @@ public class RobotContainer
         }));
 
         operator.y().onTrue(Commands.runOnce(() -> {
-            boolean disabled = SmartDashboard.getBoolean(AUTO_AIM_DISABLE_KEY, false);
-            SmartDashboard.putBoolean(AUTO_AIM_DISABLE_KEY, !disabled);
+            boolean enabled = SmartDashboard.getBoolean(AUTO_AIM_ENABLED_KEY, true);
+            SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, !enabled);
         }));
     }
 
@@ -481,7 +513,7 @@ public class RobotContainer
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
                 new WaitCommand(1.5),                       // TODO - Adjust shooter startup time
-                new AutoFeed(s_intake, s_floor, s_feeder, 3)  // TODO - Adjust period that shooter shoots for
+                new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(3)  // TODO - Adjust period that shooter shoots for
             )
         )
         );
@@ -492,7 +524,7 @@ public class RobotContainer
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
                 new WaitCommand(0),                       // TODO - Adjust shooter startup time (Set to 0 since it should already be running)
-                new AutoFeed(s_intake, s_floor, s_feeder, 5)  // TODO - Adjust period that shooter shoots for
+                new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(5)  // TODO - Adjust period that shooter shoots for
             )
         )
         );
