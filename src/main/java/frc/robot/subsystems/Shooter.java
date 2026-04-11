@@ -24,14 +24,14 @@ import frc.robot.Constants;
 
 public class Shooter extends SubsystemBase 
 {
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 80.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 40.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 30.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 20.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1.0;
 
     // Suggested starting values for VelocityTorqueCurrentFOC.
     // These gains are in torque-current units, so they are much smaller than velocity-voltage gains.
     private static final double SLOT0_KS = 3.0;
-    private static final double SLOT0_KP = 14.5;    // 12 low, 14 GOOD, 14.75 HIGH
+    private static final double SLOT0_KP = 2;    // was 1.45
     private static final double SLOT0_KI = 0.0;
     private static final double SLOT0_KD = 0.0;
     private static final double SLOT0_KV = 0.26;

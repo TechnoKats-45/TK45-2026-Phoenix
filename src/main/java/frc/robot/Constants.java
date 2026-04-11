@@ -64,7 +64,7 @@ public class Constants
         public static final double ANGLE_TOLERANCE_DEGREES = 1;
 
         public static final double PIVOT_ANGLE_DOWN = 0;
-        public static final double PIVOT_ANGLE_UP_STOWED = -100.634765625;
+        public static final double PIVOT_ANGLE_UP_STOWED = -0.23046875;
         public static final double halfStow = -50;
     }
 

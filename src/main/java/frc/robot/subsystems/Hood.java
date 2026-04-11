@@ -25,7 +25,7 @@ public class Hood extends SubsystemBase
     private static final double POSITION_SIGN = -1.0;
 
     //VARS
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 60.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 30.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS = 20.0;
     private static final double MM_CRUISE_RPS = 1;
     private static final double MM_ACCEL_RPS2 = 10;

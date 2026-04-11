@@ -374,7 +374,7 @@ public class RobotContainer
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
         driver.start().onTrue(Commands.runOnce(() -> s_vision.resetPoseFromVision(), s_vision));
-
+        driver.y().onTrue(Commands.runOnce(() -> s_intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN))); 
         driver.leftBumper().whileTrue(Commands.run(() -> {  // LONG SHOT
             s_shooter.shoot(70);    
             s_hood.setAngle(Constants.Hood.MIN_ANGLE);

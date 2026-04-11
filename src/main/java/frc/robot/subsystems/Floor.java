@@ -25,8 +25,8 @@ public class Floor extends SubsystemBase
 {
     private static final int CONFIG_RETRIES = Constants.CONFIG_RETRIES;
     //Variables
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 80.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 40.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 120.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 60.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 60/18; //TODO TUNE
     private static final double PEAK_FORWARD_VOLTS = 16.0;
     private static final double PEAK_REVERSE_VOLTS = -16.0;
@@ -41,8 +41,8 @@ public class Floor extends SubsystemBase
     private static final double SLOT0_KD = 0; // TODO TUNE
     
     // Spin Directions
-    private static final InvertedValue LEFT_MOTOR_INVERTED = InvertedValue.Clockwise_Positive;
-    private static final InvertedValue RIGHT_MOTOR_INVERTED = InvertedValue.CounterClockwise_Positive;
+    private static final InvertedValue LEFT_MOTOR_INVERTED = InvertedValue.CounterClockwise_Positive;
+    private static final InvertedValue RIGHT_MOTOR_INVERTED = InvertedValue.Clockwise_Positive;
     private static final MotorAlignmentValue RIGHT_MOTOR_ALIGNMENT = MotorAlignmentValue.Opposed;
 
     private final TalonFX left_motor;

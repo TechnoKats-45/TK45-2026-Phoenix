@@ -41,7 +41,7 @@ public class Intake extends SubsystemBase
     // PIVOT PID
     private static final double SLOT0_KS = 0.0; // TODO TUNE
     private static final double SLOT0_KV = 0.0; // TODO TUNE
-    private static final double SLOT0_KP = 1.0; // TODO TUNE
+    private static final double SLOT0_KP = 15.0; // TODO TUNE
     private static final double SLOT0_KI = 0.0; // TODO TUNE
     private static final double SLOT0_KD = 1.0; // TODO TUNE
     
@@ -51,8 +51,8 @@ public class Intake extends SubsystemBase
 
 
     //Roller Vars
-    private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 120.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 60.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS_ROLLER = 30.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS_ROLLER = 20.0;
     private static final double MM_CRUISE_RPS_ROLLER = 50.0; // TODO TUNE
     private static final double MM_ACCEL_RPS2_ROLLER = 100.0; // TODO TUNE
     private static final double SENSOR_TO_MECHANISM_RATIO_ROLLER = 1.75; //TODO TUNE
