@@ -117,6 +117,9 @@ public class RobotContainer
         SmartDashboard.putBoolean(Drivetrain.TILT_BASED_VISION_UPDATES_ENABLED_KEY, true);
         SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Stow Intake", Commands.runOnce(s_intake::stow, s_intake).ignoringDisable(true));
+        SmartDashboard.putData(
+            "Cal Intake Stowed",
+            Commands.runOnce(s_intake::setCurrentAngleAsStowed, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Zero Hood", Commands.runOnce(s_hood::zeroToMinimumAngle, s_hood).ignoringDisable(true));
     }
 

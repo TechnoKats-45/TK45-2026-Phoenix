@@ -102,6 +102,12 @@ public class Intake extends SubsystemBase
         currentAngleSetPoint = 0.0; 
     }
 
+    public void setCurrentAngleAsStowed()
+    {
+        intake_pivot_motor.setPosition(toMotorPosition(Constants.Intake.PIVOT_ANGLE_UP_STOWED));
+        currentAngleSetPoint = Constants.Intake.PIVOT_ANGLE_UP_STOWED;
+    }
+
     // pivot code
 
     public void setAngle(double angle)
