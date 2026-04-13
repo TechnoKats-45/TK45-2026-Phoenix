@@ -56,6 +56,7 @@ public class RobotContainer
     private static final String MANUAL_HOOD_ANGLE_KEY = "Tuning/Manual Hood Angle";
     private static final String MANUAL_SHOOTER_MAX_KEY = "Tuning/Manual Shooter Max RPS";
     private static final String MANUAL_HOOD_MAX_KEY = "Tuning/Manual Hood Max Angle";
+    private static final String SHOOTER_IDLE_AT_25_KEY = "Shooter Idle @ 25%";
     private static final String FEEDER_PULSE_ENABLED_KEY = "Feeder/Pulse Enabled";
     private static final double FEEDER_PULSE_ON_SECONDS = 0.1;
     private static final double FEEDER_PULSE_OFF_SECONDS = 0.2;
@@ -110,6 +111,7 @@ public class RobotContainer
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
+        SmartDashboard.putBoolean(SHOOTER_IDLE_AT_25_KEY, false);
         SmartDashboard.putBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
         SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, false);
         SmartDashboard.putBoolean(Drivetrain.TILT_BASED_VISION_UPDATES_ENABLED_KEY, true);
@@ -336,11 +338,22 @@ public class RobotContainer
             )
         );
 
-        /*
         s_shooter.setDefaultCommand(
-            s_shooter.
+            Commands.run(() -> 
+            {
+                boolean manualShooterEnabled = SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);     // Tuning mode
+                boolean shooterIdleAt25Enabled = SmartDashboard.getBoolean(SHOOTER_IDLE_AT_25_KEY, true);      // Elastic Switch
+
+                if (shooterIdleAt25Enabled && !manualShooterEnabled) 
+                {
+                    s_shooter.setShooterPercent(0.25);
+                } 
+                else 
+                {
+                    s_shooter.stopShooting();
+                }
+            }, s_shooter)
         );
-        */
 
         // Idle while the robot is disabled. This ensures the configured
         // neutral mode is applied to the drive motors while disabled.
@@ -523,7 +536,8 @@ public class RobotContainer
         Commands.parallel(
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
-                new WaitCommand(0),                       // TODO - Adjust shooter startup time (Set to 0 since it should already be running)
+                new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate),
+                new WaitCommand(0), // TODO Adjust this to give the shooter more time to startup, and autoaim more time to settle. May not be necessary to add any delay here, or it may need to be increased.
                 new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(5)  // TODO - Adjust period that shooter shoots for
             )
         )
