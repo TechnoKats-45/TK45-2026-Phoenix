@@ -61,11 +61,11 @@ public class Constants
         public static final double SPEED_TOLERANCE_RPS = 0.5;
 
         public static final double INTAKE_ROTATE_SPEED = 0.5;
-        public static final double ANGLE_TOLERANCE_DEGREES = 1;
+        public static final double ANGLE_TOLERANCE_DEGREES = 1.0;
 
-        public static final double PIVOT_ANGLE_DOWN = 0;
-        public static final double PIVOT_ANGLE_UP_STOWED = -0.23046875;
-        public static final double halfStow = -0.115;
+        public static final double PIVOT_ANGLE_DOWN = 0.0;
+        public static final double PIVOT_ANGLE_UP_STOWED = -83.0;
+        public static final double halfStow = -41.5;
     }
 
     public static class Shooter 

@@ -26,22 +26,22 @@ import frc.robot.Constants;
 public class Intake extends SubsystemBase 
 {   
     private static final int CONFIG_RETRIES = Constants.CONFIG_RETRIES;
+    private static final double DEGREES_PER_ROTATION = 360.0;
     
     // Pivot Vars
-
     private static final double STATOR_CURRENT_LIMIT_AMPS_PIVOT = 120.0;
     private static final double SUPPLY_CURRENT_LIMIT_AMPS_PIVOT = 60.0;
-    private static final double MM_CRUISE_RPS_PIVOT = 10; // TODO TUNE
-    private static final double MM_ACCEL_RPS2_PIVOT = 10; // TODO TUNE
+    private static final double MM_CRUISE_RPS_PIVOT = 0.75;
+    private static final double MM_ACCEL_RPS2_PIVOT = 1.5;
     private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80 * 1.6; // 80:1 geabox and 25:50 gear ratio
     private static final double PEAK_FORWARD_VOLTS_PIVOT= 16.0;
     private static final double PEAK_REVERSE_VOLTS_PIVOT= - 16.0; 
     private double currentAngleSetPoint = 0.0;   
 
     // PIVOT PID
-    private static final double SLOT0_KS = 0.0; // TODO TUNE
+    private static final double SLOT0_KS = 0.35;
     private static final double SLOT0_KV = 0.0; // TODO TUNE
-    private static final double SLOT0_KP = 15.0; // TODO TUNE   // Was 15
+    private static final double SLOT0_KP = 80.0;
     private static final double SLOT0_KI = 0.0; // TODO TUNE
     private static final double SLOT0_KD = 0; // TODO TUNE
     
@@ -88,7 +88,6 @@ public class Intake extends SubsystemBase
         intake_pivot_motor = new TalonFX(Constants.CAN_ID.INTAKE_PIVOT, Constants.CAN_BUS.CANIVORE);
         configurePivotMotor(intake_pivot_motor, PIVOT_INVERTED, "Pivot");
         
-        
         intake_left_roller_motor = new TalonFX(Constants.CAN_ID.INTAKE_LEFT_ROLLER, Constants.CAN_BUS.RIO);
         configureRollerMotor(intake_left_roller_motor, LEFT_ROLLER_INVERTED, "Left Roller");
         
@@ -108,18 +107,28 @@ public class Intake extends SubsystemBase
     public void setAngle(double angle)
     {
         currentAngleSetPoint = angle;
-        intake_pivot_motor.setControl(motionMagicVoltage.withPosition(angle));
+        intake_pivot_motor.setControl(motionMagicVoltage.withPosition(toMotorPosition(angle)));
         SmartDashboard.putNumber("Intake Set Point", angle);
     }
 
     public double getAngle()
     {
-        return intake_pivot_motor.getPosition().getValueAsDouble();
+        return fromMotorPosition(intake_pivot_motor.getPosition().getValueAsDouble());
     }
 
     public boolean isAligned()
     {
         return Math.abs(getAngle() - currentAngleSetPoint) <= Constants.Intake.ANGLE_TOLERANCE_DEGREES;
+    }
+
+    private double toMotorPosition(double angleDegrees)
+    {
+        return angleDegrees / DEGREES_PER_ROTATION;
+    }
+
+    private double fromMotorPosition(double motorPositionRotations)
+    {
+        return motorPositionRotations * DEGREES_PER_ROTATION;
     }
     
     public void setSpeed(double speedRps) 
@@ -254,13 +263,21 @@ public class Intake extends SubsystemBase
     }
 
     public void printDiagnostics() {
-        SmartDashboard.putNumber("Intake Current Angle", getAngle());
-        SmartDashboard.putNumber("Intake Angle Setpoint", currentAngleSetPoint);
+        double currentAngleDegrees = getAngle();
+        double setpointDegrees = currentAngleSetPoint;
+        double errorDegrees = setpointDegrees - currentAngleDegrees;
+
+        SmartDashboard.putNumber("Intake Current Angle Deg", currentAngleDegrees);
+        SmartDashboard.putNumber("Intake Angle Setpoint Deg", setpointDegrees);
+        SmartDashboard.putNumber("Intake Angle Error Deg", errorDegrees);
+        SmartDashboard.putNumber("Intake Current Angle Rot", toMotorPosition(currentAngleDegrees));
+        SmartDashboard.putNumber("Intake Angle Setpoint Rot", toMotorPosition(setpointDegrees));
         SmartDashboard.putBoolean("Intake Is Aligned", isAligned());
         SmartDashboard.putNumber(" Intake Current Speed RPS", getSpeed());
         SmartDashboard.putNumber(" Intake Speed Setpoint RPS", currentSpeedSetpointRps);
         SmartDashboard.putBoolean("Intake Is At Speed", isAtSpeed(Constants.Intake.SPEED_TOLERANCE_RPS));
         SmartDashboard.putNumber("Intake Pivot Current", intake_pivot_motor.getSupplyCurrent().getValueAsDouble());
+        SmartDashboard.putNumber("Intake Pivot Voltage", intake_pivot_motor.getMotorVoltage().getValueAsDouble());
         SmartDashboard.putNumber("Intake Roller Current", intake_left_roller_motor.getSupplyCurrent().getValueAsDouble());
     }
 }
