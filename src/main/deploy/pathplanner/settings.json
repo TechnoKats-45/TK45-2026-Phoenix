@@ -4,9 +4,10 @@
   "holonomicMode": true,
   "pathFolders": [],
   "autoFolders": [
+    "Double Mid Rush",
     "Just Preload",
     "Mid Rush",
-    "Double Mid Rush",
+    "Depot",
     "Preload Then Mid"
   ],
   "defaultMaxVel": 3.0,
