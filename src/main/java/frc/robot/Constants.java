@@ -36,7 +36,7 @@ public class Constants
         public static final int FRONT_LEFT_STEER = 41;      // Stored in Tuner Constants
         public static final int FRONT_LEFT_ENCODER = 42;    // Stored in Tuner Constants
 
-        public static final int INTAKE_LEFT_PIVOT = 50;
+        public static final int INTAKE_PIVOT = 50;
         public static final int INTAKE_RIGHT_PIVOT = 51;
         public static final int INTAKE_PIVOT = INTAKE_LEFT_PIVOT;
         public static final int INTAKE_LEFT_ROLLER = 52;
@@ -65,8 +65,8 @@ public class Constants
         public static final double ANGLE_TOLERANCE_DEGREES = 1;
 
         public static final double PIVOT_ANGLE_DOWN = 0;
-        public static final double PIVOT_ANGLE_UP_STOWED = -100.634765625;
-        public static final double halfStow = -50;
+        public static final double PIVOT_ANGLE_UP_STOWED = -0.23046875;
+        public static final double halfStow = -0.115;
     }
 
     public static class Shooter 
@@ -131,6 +131,7 @@ public class Constants
         public static final double FLOOR_SPEED = 0.5; // TODO - TUNE
         public static final double AUTO_FEED_SPEED = FLOOR_SPEED;
         public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
+        public static final double AUTO_FEED_SPEED = 0.5;  // TODO - TUNE
     }
     
     public static class Feeder 
@@ -139,6 +140,7 @@ public class Constants
         public static final double FEEDER_SPEED = 0.5; // TODO - TUNE
         public static final double AUTO_FEED_SPEED = FEEDER_SPEED;
         public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
+        public static final double AUTO_FEED_SPEED = 0.25; //TDOD - TUNE
     }
 
     public static class Vision
