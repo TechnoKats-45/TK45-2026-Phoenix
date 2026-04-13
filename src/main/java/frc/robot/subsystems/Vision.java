@@ -33,6 +33,14 @@ import frc.robot.Constants;
 import frc.robot.FieldConstants;
 
 public class Vision extends SubsystemBase {
+    private static final String DYNAMICS_FILTER_ENABLED_KEY = "Vision/Filter/RobotDynamicsEnabled";
+    private static final String MAX_ACCEPTABLE_VELOCITY_MPS_KEY = "Vision/Filter/MaxRobotVelocityMps";
+    private static final String MAX_ACCEPTABLE_ACCEL_MPS2_KEY = "Vision/Filter/MaxRobotAccelerationMpsSq";
+    private static final String MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2_KEY = "Vision/Filter/MaxRobotAngularAccelerationRadPerSecSq";
+    private static final double DEFAULT_MAX_ACCEPTABLE_VELOCITY_MPS = 2.5;
+    private static final double DEFAULT_MAX_ACCEPTABLE_ACCEL_MPS2 = 3.0;
+    private static final double DEFAULT_MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2 = 8.0;
+
     private record CameraPoseSource(
             String label,
             PhotonCamera camera,
@@ -47,6 +55,12 @@ public class Vision extends SubsystemBase {
             double averageTagDistanceMeters,
             double farthestTagDistanceMeters,
             double maxAmbiguity) {
+    }
+
+    private record MotionStats(
+            double robotVelocityMetersPerSec,
+            double robotAccelerationMetersPerSecSq,
+            double robotAngularAccelerationRadPerSecSq) {
     }
 
     public record HubObservation(
@@ -108,6 +122,12 @@ public class Vision extends SubsystemBase {
                         false));
 
         SmartDashboard.putBoolean("Vision/LastResetUsedVision", false);
+        SmartDashboard.putBoolean(DYNAMICS_FILTER_ENABLED_KEY, true);
+        SmartDashboard.putNumber(MAX_ACCEPTABLE_VELOCITY_MPS_KEY, DEFAULT_MAX_ACCEPTABLE_VELOCITY_MPS);
+        SmartDashboard.putNumber(MAX_ACCEPTABLE_ACCEL_MPS2_KEY, DEFAULT_MAX_ACCEPTABLE_ACCEL_MPS2);
+        SmartDashboard.putNumber(
+                MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2_KEY,
+                DEFAULT_MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2);
     }
 
     private CameraPoseSource createCameraSource(
@@ -291,6 +311,15 @@ public class Vision extends SubsystemBase {
                 continue;
             }
 
+            MotionStats motionStats = getMotionStats();
+            publishMotionStats(label, motionStats);
+            String motionRejectReason = getMotionRejectReason(motionStats);
+            if (motionRejectReason != null) {
+                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
+                SmartDashboard.putString("Vision/" + label + "/RejectReason", motionRejectReason);
+                continue;
+            }
+
             Pose2d estimatedPose = estimate.get().estimatedPose.toPose2d();
             if (!isInFieldBounds(estimatedPose)) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
@@ -406,6 +435,21 @@ public class Vision extends SubsystemBase {
         SmartDashboard.putNumber("Vision/" + label + "/MaxTagAmbiguity", stats.maxAmbiguity());
     }
 
+    private MotionStats getMotionStats() {
+        return new MotionStats(
+                drivetrain.getRobotLinearSpeedMetersPerSec(),
+                Math.abs(drivetrain.getRobotLinearAccelerationMetersPerSecSq()),
+                Math.abs(drivetrain.getRobotAngularAccelerationRadPerSecSq()));
+    }
+
+    private void publishMotionStats(String label, MotionStats stats) {
+        SmartDashboard.putNumber("Vision/" + label + "/RobotVelocityMps", stats.robotVelocityMetersPerSec());
+        SmartDashboard.putNumber("Vision/" + label + "/RobotAccelerationMpsSq", stats.robotAccelerationMetersPerSecSq());
+        SmartDashboard.putNumber(
+                "Vision/" + label + "/RobotAngularAccelerationRadPerSecSq",
+                stats.robotAngularAccelerationRadPerSecSq());
+    }
+
     private String getQualityRejectReason(MeasurementStats stats) {
         if (stats.tagCount() <= 0) {
             return "NoUsableTags";
@@ -421,6 +465,36 @@ public class Vision extends SubsystemBase {
 
         if (stats.tagCount() == 1 && stats.maxAmbiguity() > MAX_SINGLE_TAG_AMBIGUITY) {
             return "SingleTagAmbiguous";
+        }
+
+        return null;
+    }
+
+    private String getMotionRejectReason(MotionStats stats) {
+        if (!SmartDashboard.getBoolean(DYNAMICS_FILTER_ENABLED_KEY, true)) {
+            return null;
+        }
+
+        double maxVelocityMetersPerSec = SmartDashboard.getNumber(
+                MAX_ACCEPTABLE_VELOCITY_MPS_KEY,
+                DEFAULT_MAX_ACCEPTABLE_VELOCITY_MPS);
+        double maxAccelerationMetersPerSecSq = SmartDashboard.getNumber(
+                MAX_ACCEPTABLE_ACCEL_MPS2_KEY,
+                DEFAULT_MAX_ACCEPTABLE_ACCEL_MPS2);
+        double maxAngularAccelerationRadPerSecSq = SmartDashboard.getNumber(
+                MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2_KEY,
+                DEFAULT_MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2);
+
+        if (stats.robotVelocityMetersPerSec() > maxVelocityMetersPerSec) {
+            return "RobotVelocityTooHigh";
+        }
+
+        if (stats.robotAccelerationMetersPerSecSq() > maxAccelerationMetersPerSecSq) {
+            return "RobotAccelerationTooHigh";
+        }
+
+        if (stats.robotAngularAccelerationRadPerSecSq() > maxAngularAccelerationRadPerSecSq) {
+            return "RobotAngularAccelerationTooHigh";
         }
 
         return null;

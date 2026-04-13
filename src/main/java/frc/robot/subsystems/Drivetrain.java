@@ -18,6 +18,7 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -72,6 +73,12 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private boolean bumpTraversalActive = false;
     private double bumpRecoveryDeadlineSec = 0.0;
     private double visionRotationRecoveryDeadlineSec = 0.0;
+    private double robotLinearSpeedMetersPerSec = 0.0;
+    private double robotLinearAccelerationMetersPerSecSq = 0.0;
+    private double robotAngularAccelerationRadPerSecSq = 0.0;
+    private double lastMotionUpdateSec = Double.NaN;
+    private double lastRobotLinearSpeedMetersPerSec = 0.0;
+    private double lastRobotAngularSpeedRadPerSec = 0.0;
 
     /* Swerve requests to apply during SysId characterization */
     private final SwerveRequest.SysIdSwerveTranslation m_translationCharacterization = new SwerveRequest.SysIdSwerveTranslation();
@@ -233,6 +240,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         }
 
         updateBumpTraversalState();
+        updateMotionStats();
     }
 
     private void updateBumpTraversalState() {
@@ -267,6 +275,36 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
         SmartDashboard.putBoolean(TILT_BASED_VISION_UPDATES_ENABLED_KEY, tiltBasedVisionUpdatesEnabled);
         SmartDashboard.putBoolean("Drivetrain/AllowVisionRotation", shouldUseVisionRotation());
+    }
+
+    private void updateMotionStats() {
+        ChassisSpeeds speeds = getState().Speeds;
+        double linearSpeedMetersPerSec = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+        double angularSpeedRadPerSec = speeds.omegaRadiansPerSecond;
+        double nowSec = Timer.getFPGATimestamp();
+
+        if (Double.isNaN(lastMotionUpdateSec)) {
+            robotLinearAccelerationMetersPerSecSq = 0.0;
+            robotAngularAccelerationRadPerSecSq = 0.0;
+        } else {
+            double deltaSec = nowSec - lastMotionUpdateSec;
+            if (deltaSec > 1e-5) {
+                robotLinearAccelerationMetersPerSecSq =
+                        (linearSpeedMetersPerSec - lastRobotLinearSpeedMetersPerSec) / deltaSec;
+                robotAngularAccelerationRadPerSecSq =
+                        (angularSpeedRadPerSec - lastRobotAngularSpeedRadPerSec) / deltaSec;
+            }
+        }
+
+        robotLinearSpeedMetersPerSec = linearSpeedMetersPerSec;
+        lastRobotLinearSpeedMetersPerSec = linearSpeedMetersPerSec;
+        lastRobotAngularSpeedRadPerSec = angularSpeedRadPerSec;
+        lastMotionUpdateSec = nowSec;
+
+        SmartDashboard.putNumber("Drivetrain/LinearSpeedMps", robotLinearSpeedMetersPerSec);
+        SmartDashboard.putNumber("Drivetrain/LinearAccelMpsSq", robotLinearAccelerationMetersPerSecSq);
+        SmartDashboard.putNumber("Drivetrain/AngularSpeedRadPerSec", angularSpeedRadPerSec);
+        SmartDashboard.putNumber("Drivetrain/AngularAccelRadPerSecSq", robotAngularAccelerationRadPerSecSq);
     }
 
     private void setBumpTraversalActive(boolean active) {
@@ -403,6 +441,18 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
     public boolean isTraversingBump() {
         return bumpTraversalActive;
+    }
+
+    public double getRobotLinearSpeedMetersPerSec() {
+        return robotLinearSpeedMetersPerSec;
+    }
+
+    public double getRobotLinearAccelerationMetersPerSecSq() {
+        return robotLinearAccelerationMetersPerSecSq;
+    }
+
+    public double getRobotAngularAccelerationRadPerSecSq() {
+        return robotAngularAccelerationRadPerSecSq;
     }
 
     public boolean shouldUseVisionRotation() {
