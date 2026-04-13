@@ -89,6 +89,7 @@ public class Vision extends SubsystemBase {
     private static final double MAX_TAG_DISTANCE_M = 4.5;
     private static final double MAX_SINGLE_TAG_DISTANCE_M = 3.0;
     private static final double MAX_SINGLE_TAG_AMBIGUITY = 0.2;
+    private static final String VISION_POSE_UPDATES_ALLOWED_KEY = "Vision/PoseUpdatesAllowedByRobotState";
 
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
@@ -128,6 +129,7 @@ public class Vision extends SubsystemBase {
         SmartDashboard.putNumber(
                 MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2_KEY,
                 DEFAULT_MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2);
+        SmartDashboard.putBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, false);
     }
 
     private CameraPoseSource createCameraSource(
@@ -317,6 +319,15 @@ public class Vision extends SubsystemBase {
             if (motionRejectReason != null) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", motionRejectReason);
+                continue;
+            }
+
+            boolean allowVisionPoseUpdate = drivetrain.shouldAllowVisionPoseUpdate();
+            SmartDashboard.putBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, allowVisionPoseUpdate);
+            SmartDashboard.putBoolean("Vision/" + label + "/RobotStationary", drivetrain.isEffectivelyStationary());
+            if (!allowVisionPoseUpdate) {
+                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
+                SmartDashboard.putString("Vision/" + label + "/RejectReason", "PoseUpdateStateBlocked");
                 continue;
             }
 

@@ -9,7 +9,7 @@
         "containers": [
           {
             "title": "Zero Hood",
-            "x": 64.0,
+            "x": 0.0,
             "y": 0.0,
             "width": 256.0,
             "height": 128.0,
@@ -23,7 +23,7 @@
           },
           {
             "title": "Zero Intake",
-            "x": 64.0,
+            "x": 0.0,
             "y": 128.0,
             "width": 256.0,
             "height": 128.0,
@@ -37,26 +37,13 @@
           },
           {
             "title": "Hood Angle",
-            "x": 320.0,
+            "x": 256.0,
             "y": 0.0,
-            "width": 256.0,
+            "width": 192.0,
             "height": 128.0,
             "type": "Large Text Display",
             "properties": {
               "topic": "/SmartDashboard/Hood Angle",
-              "period": 0.06,
-              "data_type": "double"
-            }
-          },
-          {
-            "title": "Intake Current Angle",
-            "x": 320.0,
-            "y": 128.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Large Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Intake Current Angle",
               "period": 0.06,
               "data_type": "double"
             }
@@ -84,7 +71,7 @@
           },
           {
             "title": "Auto Chooser",
-            "x": 1600.0,
+            "x": 1472.0,
             "y": 0.0,
             "width": 256.0,
             "height": 128.0,
@@ -96,87 +83,22 @@
             }
           },
           {
-            "title": "Auto Aim Enabled",
-            "x": 1600.0,
+            "title": "Auto Aim Disabled (On = Disable)",
+            "x": 1472.0,
             "y": 128.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Toggle Switch",
             "properties": {
-              "topic": "/SmartDashboard/Auto Aim Enabled",
+              "topic": "/SmartDashboard/Auto Aim Disabled (On = Disable)",
               "period": 0.06,
               "data_type": "boolean"
-            }
-          },
-          {
-            "title": "Pulse Enabled",
-            "x": 1600.0,
-            "y": 256.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Toggle Switch",
-            "properties": {
-              "topic": "/SmartDashboard/Feeder/Pulse Enabled",
-              "period": 0.06,
-              "data_type": "boolean"
-            }
-          },
-          {
-            "title": "photonvision1_Port_1182_Output_MJPEG_Server",
-            "x": 1152.0,
-            "y": 0.0,
-            "width": 448.0,
-            "height": 384.0,
-            "type": "Camera Stream",
-            "properties": {
-              "topic": "/CameraPublisher/photonvision1_Port_1182_Output_MJPEG_Server",
-              "period": 0.06,
-              "rotation_turns": 0
-            }
-          },
-          {
-            "title": "photonvision1_Port_1184_Output_MJPEG_Server",
-            "x": 704.0,
-            "y": 0.0,
-            "width": 448.0,
-            "height": 384.0,
-            "type": "Camera Stream",
-            "properties": {
-              "topic": "/CameraPublisher/photonvision1_Port_1184_Output_MJPEG_Server",
-              "period": 0.06,
-              "rotation_turns": 0
-            }
-          },
-          {
-            "title": "photonvision2_Port_1181_Input_MJPEG_Server",
-            "x": 704.0,
-            "y": 384.0,
-            "width": 448.0,
-            "height": 320.0,
-            "type": "Camera Stream",
-            "properties": {
-              "topic": "/CameraPublisher/photonvision2_Port_1181_Input_MJPEG_Server",
-              "period": 0.06,
-              "rotation_turns": 0
-            }
-          },
-          {
-            "title": "photonvision2_Port_1184_Output_MJPEG_Server",
-            "x": 1152.0,
-            "y": 384.0,
-            "width": 448.0,
-            "height": 320.0,
-            "type": "Camera Stream",
-            "properties": {
-              "topic": "/CameraPublisher/photonvision2_Port_1184_Output_MJPEG_Server",
-              "period": 0.06,
-              "rotation_turns": 0
             }
           },
           {
             "title": "Intake Agitation Enabled",
-            "x": 1600.0,
-            "y": 384.0,
+            "x": 1472.0,
+            "y": 256.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Toggle Switch",
@@ -188,13 +110,166 @@
           },
           {
             "title": "EnableTiltBasedPoseUpdate",
-            "x": 1600.0,
-            "y": 512.0,
+            "x": 1472.0,
+            "y": 384.0,
             "width": 256.0,
             "height": 128.0,
             "type": "Toggle Switch",
             "properties": {
               "topic": "/SmartDashboard/Vision/EnableTiltBasedPoseUpdate",
+              "period": 0.06,
+              "data_type": "boolean"
+            }
+          },
+          {
+            "title": "UsingVision",
+            "x": 1472.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Toggle Switch",
+            "properties": {
+              "topic": "/SmartDashboard/AutoAim/UsingVision",
+              "period": 0.06,
+              "data_type": "boolean"
+            }
+          },
+          {
+            "title": "PitchDeg",
+            "x": 704.0,
+            "y": 640.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Drivetrain/PitchDeg",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
+            }
+          },
+          {
+            "title": "RollDeg",
+            "x": 832.0,
+            "y": 640.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Drivetrain/RollDeg",
+              "period": 0.06,
+              "data_type": "double",
+              "show_submit_button": false
+            }
+          },
+          {
+            "title": "photonvision1_Port_1182_Output_MJPEG_Server",
+            "x": 704.0,
+            "y": 0.0,
+            "width": 384.0,
+            "height": 320.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/photonvision1_Port_1182_Output_MJPEG_Server",
+              "period": 0.06,
+              "rotation_turns": 0,
+              "fps": 10,
+              "resolution": [
+                320.0,
+                240.0
+              ]
+            }
+          },
+          {
+            "title": "photonvision1_Port_1184_Output_MJPEG_Server",
+            "x": 1088.0,
+            "y": 0.0,
+            "width": 384.0,
+            "height": 320.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/photonvision1_Port_1184_Output_MJPEG_Server",
+              "period": 0.06,
+              "rotation_turns": 0,
+              "fps": 10,
+              "resolution": [
+                320.0,
+                240.0
+              ]
+            }
+          },
+          {
+            "title": "photonvision2_Port_1184_Output_MJPEG_Server",
+            "x": 1088.0,
+            "y": 320.0,
+            "width": 384.0,
+            "height": 320.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/photonvision2_Port_1184_Output_MJPEG_Server",
+              "period": 0.06,
+              "rotation_turns": 0,
+              "fps": 10,
+              "resolution": [
+                320.0,
+                240.0
+              ]
+            }
+          },
+          {
+            "title": "photonvision2_Port_1182_Output_MJPEG_Server",
+            "x": 704.0,
+            "y": 320.0,
+            "width": 384.0,
+            "height": 320.0,
+            "type": "Camera Stream",
+            "properties": {
+              "topic": "/CameraPublisher/photonvision2_Port_1182_Output_MJPEG_Server",
+              "period": 0.06,
+              "rotation_turns": 0,
+              "fps": 10,
+              "resolution": [
+                320.0,
+                240.0
+              ]
+            }
+          },
+          {
+            "title": "Intake Current Angle Deg",
+            "x": 256.0,
+            "y": 128.0,
+            "width": 192.0,
+            "height": 128.0,
+            "type": "Large Text Display",
+            "properties": {
+              "topic": "/SmartDashboard/Intake Current Angle Deg",
+              "period": 0.06,
+              "data_type": "double"
+            }
+          },
+          {
+            "title": "Cal Intake Stowed",
+            "x": 448.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Command",
+            "properties": {
+              "topic": "/SmartDashboard/Cal Intake Stowed",
+              "period": 0.06,
+              "show_type": true,
+              "maximize_button_space": false
+            }
+          },
+          {
+            "title": "Shooter Idle @ 25%",
+            "x": 1728.0,
+            "y": 0.0,
+            "width": 128.0,
+            "height": 128.0,
+            "type": "Toggle Switch",
+            "properties": {
+              "topic": "/SmartDashboard/Shooter Idle @ 25%",
               "period": 0.06,
               "data_type": "boolean"
             }
@@ -853,14 +928,14 @@
             }
           },
           {
-            "title": "Auto Aim Enabled",
+            "title": "Auto Aim Disabled (On = Disable)",
             "x": 896.0,
             "y": 384.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Toggle Switch",
             "properties": {
-              "topic": "/SmartDashboard/Auto Aim Enabled",
+              "topic": "/SmartDashboard/Auto Aim Disabled (On = Disable)",
               "period": 0.06,
               "data_type": "boolean"
             }

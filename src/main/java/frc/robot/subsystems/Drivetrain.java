@@ -56,6 +56,9 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private static final double BUMP_TILT_EXIT_DEG = 5.0;
     private static final double BUMP_RECOVERY_HOLD_SEC = 0.35;
     private static final double VISION_ROTATION_RECOVERY_SEC = 1.0;
+    private static final double VISION_POSE_RECOVERY_SEC = 1.0;
+    private static final double STATIONARY_LINEAR_SPEED_THRESHOLD_MPS = 0.15;
+    private static final double STATIONARY_ANGULAR_SPEED_THRESHOLD_RAD_PER_SEC = 0.2;
     private static final Matrix<N3, N1> NORMAL_STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, 0.1);
     private static final Matrix<N3, N1> BUMP_STATE_STD_DEVS = VecBuilder.fill(0.9, 0.9, 0.2);
     private static final Matrix<N3, N1> NORMAL_VISION_STD_DEVS = VecBuilder.fill(0.6, 0.6, 1.0);
@@ -72,8 +75,10 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private boolean m_hasAppliedOperatorPerspective = false;
     private boolean bumpTraversalActive = false;
     private double bumpRecoveryDeadlineSec = 0.0;
+    private double visionPoseRecoveryDeadlineSec = 0.0;
     private double visionRotationRecoveryDeadlineSec = 0.0;
     private double robotLinearSpeedMetersPerSec = 0.0;
+    private double robotAngularSpeedRadPerSec = 0.0;
     private double robotLinearAccelerationMetersPerSecSq = 0.0;
     private double robotAngularAccelerationRadPerSecSq = 0.0;
     private double lastMotionUpdateSec = Double.NaN;
@@ -253,10 +258,12 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
                 true);
 
         if (!tiltBasedVisionUpdatesEnabled) {
+            visionPoseRecoveryDeadlineSec = 0.0;
             visionRotationRecoveryDeadlineSec = 0.0;
             setBumpTraversalActive(false);
         } else if (tiltMagnitudeDeg >= BUMP_TILT_ENTER_DEG) {
             bumpRecoveryDeadlineSec = nowSec + BUMP_RECOVERY_HOLD_SEC;
+            visionPoseRecoveryDeadlineSec = nowSec + VISION_POSE_RECOVERY_SEC;
             visionRotationRecoveryDeadlineSec = nowSec + VISION_ROTATION_RECOVERY_SEC;
             setBumpTraversalActive(true);
         } else if (bumpTraversalActive
@@ -274,6 +281,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SmartDashboard.putNumber("Drivetrain/TiltMagnitudeDeg", tiltMagnitudeDeg);
         SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
         SmartDashboard.putBoolean(TILT_BASED_VISION_UPDATES_ENABLED_KEY, tiltBasedVisionUpdatesEnabled);
+        SmartDashboard.putBoolean("Drivetrain/AllowVisionPoseUpdates", shouldAllowVisionPoseUpdate());
         SmartDashboard.putBoolean("Drivetrain/AllowVisionRotation", shouldUseVisionRotation());
     }
 
@@ -297,6 +305,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         }
 
         robotLinearSpeedMetersPerSec = linearSpeedMetersPerSec;
+        robotAngularSpeedRadPerSec = angularSpeedRadPerSec;
         lastRobotLinearSpeedMetersPerSec = linearSpeedMetersPerSec;
         lastRobotAngularSpeedRadPerSec = angularSpeedRadPerSec;
         lastMotionUpdateSec = nowSec;
@@ -453,6 +462,21 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
     public double getRobotAngularAccelerationRadPerSecSq() {
         return robotAngularAccelerationRadPerSecSq;
+    }
+
+    public double getRobotAngularSpeedRadPerSec() {
+        return robotAngularSpeedRadPerSec;
+    }
+
+    public boolean isEffectivelyStationary() {
+        return robotLinearSpeedMetersPerSec <= STATIONARY_LINEAR_SPEED_THRESHOLD_MPS
+                && Math.abs(robotAngularSpeedRadPerSec) <= STATIONARY_ANGULAR_SPEED_THRESHOLD_RAD_PER_SEC;
+    }
+
+    public boolean shouldAllowVisionPoseUpdate() {
+        return bumpTraversalActive
+                || Timer.getFPGATimestamp() <= visionPoseRecoveryDeadlineSec
+                || isEffectivelyStationary();
     }
 
     public boolean shouldUseVisionRotation() {
