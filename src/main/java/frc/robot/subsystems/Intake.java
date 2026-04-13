@@ -33,7 +33,7 @@ public class Intake extends SubsystemBase
     private static final double SUPPLY_CURRENT_LIMIT_AMPS_PIVOT = 60.0;
     private static final double MM_CRUISE_RPS_PIVOT = 0.75;
     private static final double MM_ACCEL_RPS2_PIVOT = 1.5;
-    private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80 * 1.6; // 80:1 geabox and 25:50 gear ratio
+    private static final double SENSOR_TO_MECHANISM_RATIO_PIVOT = 80 * 35 / 30; // 80:1 geabox and 30:35 gear ratio
     private static final double PEAK_FORWARD_VOLTS_PIVOT= 16.0;
     private static final double PEAK_REVERSE_VOLTS_PIVOT= - 16.0; 
     private double currentAngleSetPoint = 0.0;   
