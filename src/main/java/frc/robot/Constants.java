@@ -37,7 +37,6 @@ public class Constants
         public static final int FRONT_LEFT_ENCODER = 42;    // Stored in Tuner Constants
 
         public static final int INTAKE_PIVOT = 50;
-        public static final int INTAKE_RIGHT_PIVOT = 51;
         public static final int INTAKE_LEFT_ROLLER = 52;
         public static final int INTAKE_RIGHT_ROLLER = 53;
 
