@@ -525,8 +525,8 @@ public class RobotContainer
         Commands.parallel(
             Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
             Commands.sequence(
-                new WaitCommand(1.5),                       // TODO - Adjust shooter startup time
-                new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(3)  // TODO - Adjust period that shooter shoots for
+                new WaitCommand(1.5),                                       // TODO - Adjust shooter startup time
+                new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(3)    // TODO - Adjust period that shooter shoots for
             )
         )
         );
@@ -534,7 +534,7 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "ShootFullHopper",
         Commands.parallel(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(90.0).speedRps())), // TODO - Adjust shooter distance and speed if needed
             Commands.sequence(
                 new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate),
                 new WaitCommand(0), // TODO Adjust this to give the shooter more time to startup, and autoaim more time to settle. May not be necessary to add any delay here, or it may need to be increased.
@@ -546,7 +546,7 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "SpoolShooterToShootingSpeed",
         new SequentialCommandGroup(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)) // TODO - Adjust shooter speed if needed
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(90.0).speedRps())) // TODO - Adjust shooter distance and speed if needed
             )
         );
 
