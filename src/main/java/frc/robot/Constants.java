@@ -64,8 +64,8 @@ public class Constants
         public static final double ANGLE_TOLERANCE_DEGREES = 1.0;
 
         public static final double PIVOT_ANGLE_DOWN = 0.0;
-        public static final double PIVOT_ANGLE_UP_STOWED = -83.0;
-        public static final double halfStow = -41.5;
+        public static final double PIVOT_ANGLE_UP_STOWED = -75.498046875;
+        public static final double halfStow = PIVOT_ANGLE_UP_STOWED*1/2;
     }
 
     public static class Shooter 
