@@ -67,6 +67,7 @@ public class AutoFeed extends Command
         intake.setAngle(Constants.Intake.PIVOT_ANGLE_DOWN);
         floor.stop();
         feeder.stop();
+        intake.stop();
     }
 
     @Override

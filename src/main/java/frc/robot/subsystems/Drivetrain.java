@@ -48,6 +48,8 @@ import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem 
 {
     public static final String TILT_BASED_VISION_UPDATES_ENABLED_KEY = "Vision/EnableTiltBasedPoseUpdate";
+    private static final double FLAT_FIELD_ROLL_BASELINE_DEG = 180.0;
+    private static final double FLAT_FIELD_PITCH_BASELINE_DEG = 0.0;
     private static final double kSimLoopPeriod = 0.004; // 4 ms
     private static final double BUMP_TILT_ENTER_DEG = 8.0;
     private static final double BUMP_TILT_EXIT_DEG = 5.0;
@@ -234,7 +236,9 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     }
 
     private void updateBumpTraversalState() {
-        double tiltMagnitudeDeg = Math.hypot(getRollDeg(), getPitchDeg());
+        double rollTiltDeg = getRollTiltDeg();
+        double pitchTiltDeg = getPitchTiltDeg();
+        double tiltMagnitudeDeg = Math.hypot(rollTiltDeg, pitchTiltDeg);
         double nowSec = Timer.getFPGATimestamp();
         boolean tiltBasedVisionUpdatesEnabled = SmartDashboard.getBoolean(
                 TILT_BASED_VISION_UPDATES_ENABLED_KEY,
@@ -253,8 +257,12 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
             setBumpTraversalActive(false);
         }
 
-        SmartDashboard.putNumber("Drivetrain/RollDeg", getRollDeg());
-        SmartDashboard.putNumber("Drivetrain/PitchDeg", getPitchDeg());
+        SmartDashboard.putNumber("Drivetrain/RollRawDeg", getRollDeg());
+        SmartDashboard.putNumber("Drivetrain/PitchRawDeg", getPitchDeg());
+        SmartDashboard.putNumber("Drivetrain/RollDeg", rollTiltDeg);
+        SmartDashboard.putNumber("Drivetrain/PitchDeg", pitchTiltDeg);
+        SmartDashboard.putNumber("Drivetrain/RollTiltFromFlatDeg", rollTiltDeg);
+        SmartDashboard.putNumber("Drivetrain/PitchTiltFromFlatDeg", pitchTiltDeg);
         SmartDashboard.putNumber("Drivetrain/TiltMagnitudeDeg", tiltMagnitudeDeg);
         SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
         SmartDashboard.putBoolean(TILT_BASED_VISION_UPDATES_ENABLED_KEY, tiltBasedVisionUpdatesEnabled);
@@ -372,6 +380,21 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
     public double getPitchDeg() {
         return getPigeon2().getPitch().getValueAsDouble();
+    }
+
+    public double getRollTiltDeg() {
+        return getTiltFromFlatDeg(getRollDeg(), FLAT_FIELD_ROLL_BASELINE_DEG);
+    }
+
+    public double getPitchTiltDeg() {
+        return getTiltFromFlatDeg(getPitchDeg(), FLAT_FIELD_PITCH_BASELINE_DEG);
+    }
+
+    private double getTiltFromFlatDeg(double axisAngleDeg, double flatBaselineDeg) {
+        return MathUtil.inputModulus(
+                axisAngleDeg - flatBaselineDeg,
+                -180.0,
+                180.0);
     }
 
     public Rotation2d getRawHeading() {

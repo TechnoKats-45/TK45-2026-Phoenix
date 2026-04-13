@@ -10,13 +10,13 @@ public class Constants
     
     public static final int CONFIG_RETRIES = 3;
 
-    public class CAN_BUS
+    public static class CAN_BUS
     {
         public static final String RIO = "rio";
         public static final String CANIVORE = "canivore";
     }
 
-    public class CAN_ID 
+    public static class CAN_ID 
     {
         public static final int PIGEON = 2;
 
@@ -38,6 +38,7 @@ public class Constants
 
         public static final int INTAKE_LEFT_PIVOT = 50;
         public static final int INTAKE_RIGHT_PIVOT = 51;
+        public static final int INTAKE_PIVOT = INTAKE_LEFT_PIVOT;
         public static final int INTAKE_LEFT_ROLLER = 52;
         public static final int INTAKE_RIGHT_ROLLER = 53;
 
@@ -55,7 +56,7 @@ public class Constants
         public static final int RIGHT_SHOOTER = 62;
     }
     
-    public class Intake
+    public static class Intake
     {
         public static final double INTAKE_SPEED = 1;
         public static final double SPEED_TOLERANCE_RPS = 0.5;
@@ -68,7 +69,7 @@ public class Constants
         public static final double halfStow = -50;
     }
 
-    public class Shooter 
+    public static class Shooter 
     {
         public static final double MAX_SPEED_RPS = 100.0;
         public static final double SPEED_TOLERANCE_RPS = 0.5;
@@ -114,7 +115,7 @@ public class Constants
         }
     }
 
-    public class Hood 
+    public static class Hood 
     {
         public static final double ROTATE_SPEED = 0.5; // TODO - TUNE
         public static final double ANGLE_TOLERANCE_DEGREES = 1; // TODO - TUNE
@@ -124,21 +125,23 @@ public class Constants
         public static final double HOOD_ANGLE_UP_STOWED = MAX_ANGLE;
     }
     
-    public class Floor 
+    public static class Floor 
     {
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
         public static final double FLOOR_SPEED = 0.5; // TODO - TUNE
+        public static final double AUTO_FEED_SPEED = FLOOR_SPEED;
         public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
     }
     
-    public class Feeder 
+    public static class Feeder 
     {
         public static final double SPEED_TOLERANCE_RPS = 0.5; // TODO - TUNE
         public static final double FEEDER_SPEED = 0.5; // TODO - TUNE
+        public static final double AUTO_FEED_SPEED = FEEDER_SPEED;
         public static final double SHOOT_SPEED = 0.5; // TODO - TUNE
     }
 
-    public class Vision
+    public static class Vision
     {
         // Match these exactly to PhotonVision camera names on the coprocessor.
         public static final String LEFT_CAMERA_NAME = "Photon_Left";

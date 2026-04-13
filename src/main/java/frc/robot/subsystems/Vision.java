@@ -41,6 +41,14 @@ public class Vision extends SubsystemBase {
             boolean useForHubObservation) {
     }
 
+    private record MeasurementStats(
+            int tagCount,
+            double closestTagDistanceMeters,
+            double averageTagDistanceMeters,
+            double farthestTagDistanceMeters,
+            double maxAmbiguity) {
+    }
+
     public record HubObservation(
             Translation2d robotToHubFrontMeters,
             double rangeToHubCenterMeters,
@@ -64,6 +72,9 @@ public class Vision extends SubsystemBase {
     private static final double FIELD_BOUNDS_MARGIN_M = 0.3;
     private static final double BUMP_HARD_RESET_TRANSLATION_ERROR_M = 1.0;
     private static final int BUMP_HARD_RESET_TAG_COUNT = 2;
+    private static final double MAX_TAG_DISTANCE_M = 4.5;
+    private static final double MAX_SINGLE_TAG_DISTANCE_M = 3.0;
+    private static final double MAX_SINGLE_TAG_AMBIGUITY = 0.2;
 
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
@@ -243,6 +254,9 @@ public class Vision extends SubsystemBase {
             if (result.getBestTarget() != null) {
                 SmartDashboard.putNumber("Vision/" + label + "/BestTagId", result.getBestTarget().getFiducialId());
                 SmartDashboard.putNumber("Vision/" + label + "/BestTagAmbiguity", result.getBestTarget().getPoseAmbiguity());
+                SmartDashboard.putNumber(
+                        "Vision/" + label + "/BestTagDistanceM",
+                        result.getBestTarget().getBestCameraToTarget().getTranslation().getNorm());
             }
 
             Optional<EstimatedRobotPose> estimate = estimator.update(result);
@@ -265,6 +279,15 @@ public class Vision extends SubsystemBase {
             if (estimateTimestamp <= getLastAcceptedTimestamp(label)) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putString("Vision/" + label + "/RejectReason", "StaleTimestamp");
+                continue;
+            }
+
+            MeasurementStats measurementStats = getMeasurementStats(estimate.get().targetsUsed);
+            publishMeasurementStats(label, measurementStats);
+            String qualityRejectReason = getQualityRejectReason(measurementStats);
+            if (qualityRejectReason != null) {
+                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
+                SmartDashboard.putString("Vision/" + label + "/RejectReason", qualityRejectReason);
                 continue;
             }
 
@@ -349,6 +372,60 @@ public class Vision extends SubsystemBase {
                 && translationJumpMeters >= BUMP_HARD_RESET_TRANSLATION_ERROR_M;
     }
 
+    private MeasurementStats getMeasurementStats(List<PhotonTrackedTarget> targets) {
+        if (targets == null || targets.isEmpty()) {
+            return new MeasurementStats(0, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, 0.0, 1.0);
+        }
+
+        double closestDistanceMeters = Double.POSITIVE_INFINITY;
+        double farthestDistanceMeters = 0.0;
+        double totalDistanceMeters = 0.0;
+        double maxAmbiguity = 0.0;
+
+        for (PhotonTrackedTarget target : targets) {
+            double tagDistanceMeters = target.getBestCameraToTarget().getTranslation().getNorm();
+            closestDistanceMeters = Math.min(closestDistanceMeters, tagDistanceMeters);
+            farthestDistanceMeters = Math.max(farthestDistanceMeters, tagDistanceMeters);
+            totalDistanceMeters += tagDistanceMeters;
+            maxAmbiguity = Math.max(maxAmbiguity, Math.max(0.0, target.getPoseAmbiguity()));
+        }
+
+        return new MeasurementStats(
+                targets.size(),
+                closestDistanceMeters,
+                totalDistanceMeters / targets.size(),
+                farthestDistanceMeters,
+                maxAmbiguity);
+    }
+
+    private void publishMeasurementStats(String label, MeasurementStats stats) {
+        SmartDashboard.putNumber("Vision/" + label + "/UsedTagCount", stats.tagCount());
+        SmartDashboard.putNumber("Vision/" + label + "/ClosestTagDistanceM", stats.closestTagDistanceMeters());
+        SmartDashboard.putNumber("Vision/" + label + "/AverageTagDistanceM", stats.averageTagDistanceMeters());
+        SmartDashboard.putNumber("Vision/" + label + "/FarthestTagDistanceM", stats.farthestTagDistanceMeters());
+        SmartDashboard.putNumber("Vision/" + label + "/MaxTagAmbiguity", stats.maxAmbiguity());
+    }
+
+    private String getQualityRejectReason(MeasurementStats stats) {
+        if (stats.tagCount() <= 0) {
+            return "NoUsableTags";
+        }
+
+        if (stats.closestTagDistanceMeters() > MAX_TAG_DISTANCE_M) {
+            return "TagsTooFar";
+        }
+
+        if (stats.tagCount() == 1 && stats.closestTagDistanceMeters() > MAX_SINGLE_TAG_DISTANCE_M) {
+            return "SingleTagTooFar";
+        }
+
+        if (stats.tagCount() == 1 && stats.maxAmbiguity() > MAX_SINGLE_TAG_AMBIGUITY) {
+            return "SingleTagAmbiguous";
+        }
+
+        return null;
+    }
+
     private boolean isInFieldBounds(Pose2d pose) {
         return pose.getX() >= -FIELD_BOUNDS_MARGIN_M
                 && pose.getX() <= FieldConstants.FIELD_LENGTH + FIELD_BOUNDS_MARGIN_M
@@ -395,7 +472,13 @@ public class Vision extends SubsystemBase {
         }
 
         estimator.setReferencePose(drivetrain.getState().Pose);
-        return estimator.update(latest);
+        Optional<EstimatedRobotPose> estimate = estimator.update(latest);
+        if (estimate.isEmpty()) {
+            return Optional.empty();
+        }
+
+        MeasurementStats measurementStats = getMeasurementStats(estimate.get().targetsUsed);
+        return getQualityRejectReason(measurementStats) == null ? estimate : Optional.empty();
     }
 
     private Optional<EstimatedRobotPose> pickBetterEstimate(

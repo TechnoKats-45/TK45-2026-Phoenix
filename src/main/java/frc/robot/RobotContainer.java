@@ -105,7 +105,7 @@ public class RobotContainer
     private void initializeTuningDashboard()
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
-        SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, true);    // FALSE = manual shooter mode by default
+        SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, true);    // TRUE = auto aim enabled by default
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
