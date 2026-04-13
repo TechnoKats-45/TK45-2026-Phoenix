@@ -534,11 +534,14 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "ShootFullHopper",
         Commands.parallel(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(90.0).speedRps())), // TODO - Adjust shooter distance and speed if needed
-            Commands.sequence(
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(87.8).speedRps())), // TODO - Adjust shooter distance and speed if needed
+            new WaitCommand(0), // Adjust this to give the shooter more time to spool up.
+            Commands.parallel(  // This allows us to aim and spool up at the same time, and continue to adjust aim while feeding.
                 new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate),
-                new WaitCommand(0), // TODO Adjust this to give the shooter more time to startup, and autoaim more time to settle. May not be necessary to add any delay here, or it may need to be increased.
-                new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(5)  // TODO - Adjust period that shooter shoots for
+                Commands.sequence(
+                    new WaitCommand(0), // Adjust this to give autoaim more time to settle.
+                    new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(5)  // TODO - Adjust period that shooter shoots for
+                )
             )
         )
         );
