@@ -71,6 +71,7 @@ public class Vision extends SubsystemBase {
     }
 
     private final Drivetrain drivetrain;
+    private final AprilTagFieldLayout fieldLayout;
     private final List<CameraPoseSource> cameraPoseSources;
     private final Map<String, Optional<PhotonPipelineResult>> latestResults = new HashMap<>();
     private final Map<String, Double> lastAcceptedTimestamps = new HashMap<>();
@@ -78,8 +79,8 @@ public class Vision extends SubsystemBase {
     private boolean poseSeededFromVision = false;
 
     // Vision fusion tuning constants (hardcoded; not configurable via SmartDashboard)
-    private static final double MAX_TRANSLATION_JUMP_M = 6.0;
-    private static final double MAX_ROTATION_JUMP_DEG = 120.0;
+    private static final double MAX_TRANSLATION_JUMP_M = 3.0;
+    private static final double MAX_ROTATION_JUMP_DEG = 90.0;
     private static final boolean ENABLE_POSE_FUSION = true;
     private static final boolean ENABLE_INITIAL_POSE_SEED = true;
     private static final double MAX_MEASUREMENT_AGE_SEC = 0.5;
@@ -87,14 +88,21 @@ public class Vision extends SubsystemBase {
     private static final double BUMP_HARD_RESET_TRANSLATION_ERROR_M = 1.0;
     private static final int BUMP_HARD_RESET_TAG_COUNT = 2;
     private static final double MAX_TAG_DISTANCE_M = 4.5;
-    private static final double MAX_SINGLE_TAG_DISTANCE_M = 3.0;
-    private static final double MAX_SINGLE_TAG_AMBIGUITY = 0.2;
+    private static final double MAX_SINGLE_TAG_DISTANCE_M = 4.0;
+    private static final double MAX_SINGLE_TAG_AMBIGUITY = 0.35;
+    private static final double MAX_MOVING_TAG_DISTANCE_M = 3.2;
+    private static final double MAX_MOVING_AVERAGE_TAG_DISTANCE_M = 2.8;
+    private static final double MAX_MOVING_SINGLE_TAG_DISTANCE_M = 2.2;
+    private static final double MAX_MOVING_SINGLE_TAG_AMBIGUITY = 0.15;
+    private static final double STATIONARY_POSE_RECOVERY_TRANSLATION_ERROR_M = 3.0;
+    private static final double STATIONARY_POSE_RECOVERY_CLOSE_TAG_DISTANCE_M = 2.5;
     private static final String VISION_POSE_UPDATES_ALLOWED_KEY = "Vision/PoseUpdatesAllowedByRobotState";
 
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
 
         AprilTagFieldLayout layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+        this.fieldLayout = layout;
 
         cameraPoseSources = List.of(
                 createCameraSource(
@@ -325,9 +333,11 @@ public class Vision extends SubsystemBase {
             boolean allowVisionPoseUpdate = drivetrain.shouldAllowVisionPoseUpdate();
             SmartDashboard.putBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, allowVisionPoseUpdate);
             SmartDashboard.putBoolean("Vision/" + label + "/RobotStationary", drivetrain.isEffectivelyStationary());
-            if (!allowVisionPoseUpdate) {
+
+            String allianceSideRejectReason = getAllianceSideRejectReason(estimate.get().targetsUsed);
+            if (allianceSideRejectReason != null) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "PoseUpdateStateBlocked");
+                SmartDashboard.putString("Vision/" + label + "/RejectReason", allianceSideRejectReason);
                 continue;
             }
 
@@ -345,7 +355,9 @@ public class Vision extends SubsystemBase {
             }
 
             boolean useVisionRotation = drivetrain.shouldUseVisionRotation();
+            boolean forceVisionPose = drivetrain.shouldForceVisionPose();
             SmartDashboard.putBoolean("Vision/" + label + "/UseVisionRotation", useVisionRotation);
+            SmartDashboard.putBoolean("Vision/" + label + "/ForceVisionPose", forceVisionPose);
 
             if (!poseSeededFromVision && ENABLE_INITIAL_POSE_SEED) {
                 drivetrain.resetPoseFromVision(estimatedPose, useVisionRotation);
@@ -358,7 +370,9 @@ public class Vision extends SubsystemBase {
             Pose2d currentPose = drivetrain.getState().Pose;
             double transJump = estimatedPose.getTranslation().getDistance(currentPose.getTranslation());
             double rotJumpDeg = Math.abs(estimatedPose.getRotation().minus(currentPose.getRotation()).getDegrees());
-            if (transJump > MAX_TRANSLATION_JUMP_M || rotJumpDeg > MAX_ROTATION_JUMP_DEG) {
+            boolean shouldRecoverPose = shouldRecoverFromLargePoseError(measurementStats, transJump);
+            SmartDashboard.putBoolean("Vision/" + label + "/PoseRecoveryEligible", shouldRecoverPose);
+            if (!shouldRecoverPose && (transJump > MAX_TRANSLATION_JUMP_M || rotJumpDeg > MAX_ROTATION_JUMP_DEG)) {
                 SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
                 SmartDashboard.putNumber("Vision/" + label + "/RejectedTransJumpM", transJump);
                 SmartDashboard.putNumber("Vision/" + label + "/RejectedRotJumpDeg", rotJumpDeg);
@@ -371,7 +385,7 @@ public class Vision extends SubsystemBase {
                     : drivetrain.useGyroHeadingForPose(estimatedPose);
             Matrix<N3, N1> stdDevs = getVisionStdDevs(result);
 
-            if (shouldHardResetDuringBump(result, transJump)) {
+            if (forceVisionPose || shouldHardResetDuringBump(result, transJump) || shouldRecoverPose) {
                 drivetrain.resetPoseFromVision(fusedPose, useVisionRotation);
             } else {
                 drivetrain.addVisionMeasurement(fusedPose, estimateTimestamp, stdDevs);
@@ -400,16 +414,30 @@ public class Vision extends SubsystemBase {
             return VecBuilder.fill(0.2, 0.2, 0.5);
         }
 
-        if (tagCount >= 2) {
-            return VecBuilder.fill(0.2, 0.2, 0.5);
+        if (!drivetrain.isEffectivelyStationary()) {
+            if (tagCount >= 2) {
+                return VecBuilder.fill(1.8, 1.8, 3.0);
+            }
+            return VecBuilder.fill(3.0, 3.0, 4.5);
         }
-        return VecBuilder.fill(0.6, 0.6, 1.0);
+
+        if (tagCount >= 2) {
+            return VecBuilder.fill(0.3, 0.3, 0.7);
+        }
+        return VecBuilder.fill(0.8, 0.8, 1.4);
     }
 
     private boolean shouldHardResetDuringBump(PhotonPipelineResult result, double translationJumpMeters) {
         return drivetrain.isTraversingBump()
                 && result.targets.size() >= BUMP_HARD_RESET_TAG_COUNT
                 && translationJumpMeters >= BUMP_HARD_RESET_TRANSLATION_ERROR_M;
+    }
+
+    private boolean shouldRecoverFromLargePoseError(MeasurementStats stats, double translationJumpMeters) {
+        return drivetrain.isEffectivelyStationary()
+                && translationJumpMeters >= STATIONARY_POSE_RECOVERY_TRANSLATION_ERROR_M
+                && (stats.tagCount() >= 2
+                        || stats.closestTagDistanceMeters() <= STATIONARY_POSE_RECOVERY_CLOSE_TAG_DISTANCE_M);
     }
 
     private MeasurementStats getMeasurementStats(List<PhotonTrackedTarget> targets) {
@@ -466,6 +494,25 @@ public class Vision extends SubsystemBase {
             return "NoUsableTags";
         }
 
+        boolean robotMoving = !drivetrain.isEffectivelyStationary() && !drivetrain.shouldForceVisionPose();
+        if (robotMoving) {
+            if (stats.closestTagDistanceMeters() > MAX_MOVING_TAG_DISTANCE_M) {
+                return "MovingTagsTooFar";
+            }
+
+            if (stats.averageTagDistanceMeters() > MAX_MOVING_AVERAGE_TAG_DISTANCE_M) {
+                return "MovingAvgTagDistanceTooFar";
+            }
+
+            if (stats.tagCount() == 1 && stats.closestTagDistanceMeters() > MAX_MOVING_SINGLE_TAG_DISTANCE_M) {
+                return "MovingSingleTagTooFar";
+            }
+
+            if (stats.tagCount() == 1 && stats.maxAmbiguity() > MAX_MOVING_SINGLE_TAG_AMBIGUITY) {
+                return "MovingSingleTagAmbiguous";
+            }
+        }
+
         if (stats.closestTagDistanceMeters() > MAX_TAG_DISTANCE_M) {
             return "TagsTooFar";
         }
@@ -476,6 +523,59 @@ public class Vision extends SubsystemBase {
 
         if (stats.tagCount() == 1 && stats.maxAmbiguity() > MAX_SINGLE_TAG_AMBIGUITY) {
             return "SingleTagAmbiguous";
+        }
+
+        return null;
+    }
+
+    private String getAllianceSideRejectReason(List<PhotonTrackedTarget> targets) {
+        Optional<Alliance> alliance = DriverStation.getAlliance();
+        if (alliance.isEmpty() || drivetrain.isEffectivelyStationary() || drivetrain.shouldForceVisionPose()) {
+            return null;
+        }
+
+        double fieldMidX = FieldConstants.FIELD_LENGTH / 2.0;
+        double currentX = drivetrain.getState().Pose.getX();
+        boolean robotOnBlueHalf = currentX < fieldMidX;
+        boolean robotOnRedHalf = currentX > fieldMidX;
+
+        if (!robotOnBlueHalf && !robotOnRedHalf) {
+            return null;
+        }
+
+        boolean allTagsOnOpponentHalf = true;
+        boolean sawAnyKnownTag = false;
+        for (PhotonTrackedTarget target : targets) {
+            Optional<Pose3d> tagPose = fieldLayout.getTagPose(target.getFiducialId());
+            if (tagPose.isEmpty()) {
+                continue;
+            }
+
+            sawAnyKnownTag = true;
+            boolean tagOnBlueHalf = tagPose.get().getX() < fieldMidX;
+            boolean tagOnRedHalf = tagPose.get().getX() > fieldMidX;
+
+            if (alliance.get() == Alliance.Blue && tagOnBlueHalf) {
+                allTagsOnOpponentHalf = false;
+                break;
+            }
+
+            if (alliance.get() == Alliance.Red && tagOnRedHalf) {
+                allTagsOnOpponentHalf = false;
+                break;
+            }
+        }
+
+        if (!sawAnyKnownTag) {
+            return null;
+        }
+
+        if (alliance.get() == Alliance.Blue && robotOnBlueHalf && allTagsOnOpponentHalf) {
+            return "OpponentHalfTags";
+        }
+
+        if (alliance.get() == Alliance.Red && robotOnRedHalf && allTagsOnOpponentHalf) {
+            return "OpponentHalfTags";
         }
 
         return null;
@@ -543,6 +643,14 @@ public class Vision extends SubsystemBase {
         SmartDashboard.putNumber("Vision/LastResetY", pose.getY());
         SmartDashboard.putNumber("Vision/LastResetThetaDeg", pose.getRotation().getDegrees());
         return true;
+    }
+
+    public void markPoseSeededExternally() {
+        poseSeededFromVision = true;
+    }
+
+    public void allowInitialVisionSeed() {
+        poseSeededFromVision = false;
     }
 
     private Optional<EstimatedRobotPose> getLatestEstimate(PhotonCamera camera, PhotonPoseEstimator estimator) {

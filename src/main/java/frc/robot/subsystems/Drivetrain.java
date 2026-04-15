@@ -56,7 +56,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private static final double BUMP_TILT_EXIT_DEG = 5.0;
     private static final double BUMP_RECOVERY_HOLD_SEC = 0.35;
     private static final double VISION_ROTATION_RECOVERY_SEC = 1.0;
-    private static final double VISION_POSE_RECOVERY_SEC = 1.0;
+    private static final double VISION_POSE_RECOVERY_SEC = 1.5;
     private static final double STATIONARY_LINEAR_SPEED_THRESHOLD_MPS = 0.15;
     private static final double STATIONARY_ANGULAR_SPEED_THRESHOLD_RAD_PER_SEC = 0.2;
     private static final Matrix<N3, N1> NORMAL_STATE_STD_DEVS = VecBuilder.fill(0.1, 0.1, 0.1);
@@ -282,6 +282,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
         SmartDashboard.putBoolean(TILT_BASED_VISION_UPDATES_ENABLED_KEY, tiltBasedVisionUpdatesEnabled);
         SmartDashboard.putBoolean("Drivetrain/AllowVisionPoseUpdates", shouldAllowVisionPoseUpdate());
+        SmartDashboard.putBoolean("Drivetrain/ForceVisionPose", shouldForceVisionPose());
         SmartDashboard.putBoolean("Drivetrain/AllowVisionRotation", shouldUseVisionRotation());
     }
 
@@ -391,6 +392,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
     private Rotation2d autoAimTargetHeading = Rotation2d.kZero;
     private double autoAimToleranceDeg = 0.0;
     private boolean autoAimActive = false;
+    private double autoAimHeadingOffsetDeg = 0.0;
 
     public boolean isAutoBuilderConfigured() {
         return m_autoBuilderConfigured;
@@ -407,6 +409,22 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         autoAimToleranceDeg = 0.0;
     }
 
+    public void adjustAutoAimHeadingOffsetDeg(double deltaDeg) {
+        autoAimHeadingOffsetDeg += deltaDeg;
+    }
+
+    public double getAutoAimHeadingOffsetDeg() {
+        return autoAimHeadingOffsetDeg;
+    }
+
+    public Rotation2d getAutoAimHeadingOffset() {
+        return Rotation2d.fromDegrees(autoAimHeadingOffsetDeg);
+    }
+
+    public void resetAutoAimHeadingOffset() {
+        autoAimHeadingOffsetDeg = 0.0;
+    }
+
     public boolean isRotAligned() {
         if (!autoAimActive) {
             return false;
@@ -414,6 +432,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
         double headingErrorDeg = Math.toDegrees(
                 MathUtil.angleModulus(autoAimTargetHeading.minus(getState().Pose.getRotation()).getRadians()));
+        SmartDashboard.putNumber("Drivetrain/AutoAimHeadingOffsetDeg", autoAimHeadingOffsetDeg);
         return Math.abs(headingErrorDeg) <= autoAimToleranceDeg;
     }
 
@@ -477,6 +496,10 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         return bumpTraversalActive
                 || Timer.getFPGATimestamp() <= visionPoseRecoveryDeadlineSec
                 || isEffectivelyStationary();
+    }
+
+    public boolean shouldForceVisionPose() {
+        return bumpTraversalActive || Timer.getFPGATimestamp() <= visionPoseRecoveryDeadlineSec;
     }
 
     public boolean shouldUseVisionRotation() {

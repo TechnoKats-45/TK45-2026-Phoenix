@@ -70,7 +70,7 @@ public class Constants
     public static class Shooter 
     {
         public static final double MAX_SPEED_RPS = 100.0;
-        public static final double SPEED_TOLERANCE_RPS = 0.5;
+        public static final double SPEED_TOLERANCE_RPS = 2.0;
 
         public static final double SHOOTER_SPEED_CLOSE = 60.0; // TODO - TUNE 
 
@@ -81,8 +81,8 @@ public class Constants
         {
             // Format: distance_inches -> ShotProfile(hood_deg, speed_rps)
             // Example: DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(22.0, 70.0));
-            DISTANCE_ANGLE_SPEED.put(87.8,new ShotProfile(Hood.MIN_ANGLE,50.5));
-            DISTANCE_ANGLE_SPEED.put(110.0, new ShotProfile(Hood.MIN_ANGLE,55.5));
+            DISTANCE_ANGLE_SPEED.put(87.8,new ShotProfile(Hood.MIN_ANGLE,49));
+            DISTANCE_ANGLE_SPEED.put(110.0, new ShotProfile(Hood.MIN_ANGLE,53.5));
             DISTANCE_ANGLE_SPEED.put(150.0, new ShotProfile(Hood.MIN_ANGLE, 70.0));
         }
 
@@ -168,7 +168,7 @@ public class Constants
                 new Rotation3d(
                         0.0,
                         Math.toRadians(10.0),
-                        Math.toRadians(-165.0)));
+                        Math.toRadians(-170.0)));
 
         public static final Transform3d ROBOT_TO_RIGHT_CAMERA = new Transform3d(
                 new Translation3d(
@@ -178,7 +178,7 @@ public class Constants
                 new Rotation3d(
                         0.0,
                         Math.toRadians(10.0),
-                        Math.toRadians(165.0)));
+                        Math.toRadians(170.0)));
 
         public static final Transform3d ROBOT_TO_SIDE_LEFT_CAMERA = new Transform3d(
                 new Translation3d(

@@ -45,7 +45,7 @@ public class AutoFeed extends Command
             double elapsedSeconds = Timer.getFPGATimestamp() - startTimeSeconds;
             double cycleSeconds = INTAKE_AGITATION_HALF_UP_SECONDS + INTAKE_AGITATION_DOWN_SECONDS;
             double cycleTimeSeconds = elapsedSeconds % cycleSeconds;
-            double agitationTopAngle = (Constants.Intake.PIVOT_ANGLE_DOWN + Constants.Intake.PIVOT_ANGLE_UP_STOWED) / 4.0 * 3;
+            double agitationTopAngle = (Constants.Intake.PIVOT_ANGLE_DOWN + Constants.Intake.PIVOT_ANGLE_UP_STOWED) / 3 * 2;
 
             if (cycleTimeSeconds < INTAKE_AGITATION_HALF_UP_SECONDS) {
                 intake.setAngle(agitationTopAngle);

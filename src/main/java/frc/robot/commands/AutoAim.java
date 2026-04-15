@@ -27,7 +27,7 @@ import frc.robot.subsystems.Vision;
 public class AutoAim extends Command 
 {
         // Auto-aim rotation PID (local to AutoAim, not in Constants)
-        private static final double ROTATION_KP = 10;   
+        private static final double ROTATION_KP = 20;           // 10 too low, but works, 50 TOO high, 25 slightly too high
         private static final double ROTATION_KI = 0.0;
         private static final double ROTATION_KD = 0.0;
 
@@ -78,6 +78,7 @@ public class AutoAim extends Command
         @Override
         public void initialize() 
         {
+                drivetrain.resetAutoAimHeadingOffset();
         }
 
         @Override
@@ -103,7 +104,9 @@ public class AutoAim extends Command
 
                 Translation2d robotToGoal = targetPose.toPose2d().getTranslation()
                         .minus(drivetrain.getState().Pose.getTranslation());
-                Rotation2d desiredHeading = robotToGoal.getAngle().plus(Rotation2d.k180deg);
+                Rotation2d desiredHeading = robotToGoal.getAngle()
+                        .plus(Rotation2d.k180deg)
+                        .plus(drivetrain.getAutoAimHeadingOffset());
                 if (!testShootMode) {
                         drivetrain.setAutoAimTargetHeading(
                                 desiredHeading,
@@ -133,14 +136,17 @@ public class AutoAim extends Command
                 double headingErrorDeg = Math.toDegrees(
                                 MathUtil.angleModulus(desiredHeadingRad - currentHeadingRad));
 
+                double forwardInput = forwardSupplier != null ? forwardSupplier.getAsDouble() : 0.0;
+                double strafeInput = strafeSupplier != null ? strafeSupplier.getAsDouble() : 0.0;
+                double manualRotInput = rumbleController != null ? rumbleController.getRawAxis(4) : 0.0;
                 double forward = MathUtil.applyDeadband(
-                        -forwardSupplier.getAsDouble(),
+                        -forwardInput,
                         Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
                 double strafe = MathUtil.applyDeadband(
-                        -strafeSupplier.getAsDouble(),
+                        -strafeInput,
                         Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
                 double manualRot = MathUtil.applyDeadband(
-                        -rumbleController.getRawAxis(4),
+                        -manualRotInput,
                         Constants.Vision.AUTO_AIM_TRANSLATION_DEADBAND);
 
                 drivetrain.setControl(
@@ -163,6 +169,7 @@ public class AutoAim extends Command
                 SmartDashboard.putNumber("AutoAim/TargetY", targetPose.getY());
                 SmartDashboard.putNumber("AutoAim/RangeInches", rangeInches);
                 SmartDashboard.putNumber("AutoAim/DesiredHeadingDeg", desiredHeading.getDegrees());
+                SmartDashboard.putNumber("AutoAim/HeadingOffsetDeg", drivetrain.getAutoAimHeadingOffsetDeg());
                 SmartDashboard.putNumber("AutoAim/HeadingErrorDeg", headingErrorDeg);
                 SmartDashboard.putNumber("AutoAim/HoodDeg", shotProfile.hoodDeg());
                 SmartDashboard.putNumber("AutoAim/ShooterRps", shotProfile.speedRps());
@@ -180,7 +187,9 @@ public class AutoAim extends Command
                 boolean readyToShoot = testShootMode
                         ? (hood.isAligned() && shooter.isAtSpeed())
                         : (drivetrain.isRotAligned() && hood.isAligned() && shooter.isAtSpeed());
-                rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, readyToShoot ? 1.0 : 0.0);
+                if (rumbleController != null) {
+                        rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, readyToShoot ? 1.0 : 0.0);
+                }
         }
 
         @Override
@@ -188,7 +197,10 @@ public class AutoAim extends Command
         {
 
                 drivetrain.clearAutoAimTargetHeading();
-                rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
+                drivetrain.resetAutoAimHeadingOffset();
+                if (rumbleController != null) {
+                        rumbleController.setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
+                }
                 shooter.stop();
                 rotationController.reset();
                 drivetrain.setControl(

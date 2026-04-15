@@ -57,9 +57,11 @@ public class RobotContainer
     private static final String MANUAL_SHOOTER_MAX_KEY = "Tuning/Manual Shooter Max RPS";
     private static final String MANUAL_HOOD_MAX_KEY = "Tuning/Manual Hood Max Angle";
     private static final String SHOOTER_IDLE_AT_25_KEY = "Shooter Idle @ 25%";
+    private static final String SHOOTER_IDLE_PERCENT_KEY = "Shooter/IdlePercent";
     private static final String FEEDER_PULSE_ENABLED_KEY = "Feeder/Pulse Enabled";
     private static final double FEEDER_PULSE_ON_SECONDS = 0.1;
     private static final double FEEDER_PULSE_OFF_SECONDS = 0.2;
+    private static final double SHOOTER_PERCENT_STEP = 0.05;
 
     // Declare and instantiate variables:
     private double MaxSpeed = 1.0 * TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -93,6 +95,7 @@ public class RobotContainer
     private final SendableChooser<Command> autoChooser;
     private final Timer feederPulseTimer = new Timer();
     private boolean feederPulseEnabled = true;
+    private double shooterIdlePercent = 0.25;
 
     public RobotContainer() 
     {
@@ -112,8 +115,9 @@ public class RobotContainer
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
         SmartDashboard.putBoolean(SHOOTER_IDLE_AT_25_KEY, false);
+        SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
         SmartDashboard.putBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
-        SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, false);
+        SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, true);
         SmartDashboard.putBoolean(Drivetrain.TILT_BASED_VISION_UPDATES_ENABLED_KEY, true);
         SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Stow Intake", Commands.runOnce(s_intake::stow, s_intake).ignoringDisable(true));
@@ -121,6 +125,9 @@ public class RobotContainer
             "Cal Intake Stowed",
             Commands.runOnce(s_intake::setCurrentAngleAsStowed, s_intake).ignoringDisable(true));
         SmartDashboard.putData("Zero Hood", Commands.runOnce(s_hood::zeroToMinimumAngle, s_hood).ignoringDisable(true));
+        SmartDashboard.putData(
+            "Reset Aim Offset",
+            Commands.runOnce(drivetrain::resetAutoAimHeadingOffset, drivetrain).ignoringDisable(true));
     }
 
     public void periodic()
@@ -344,12 +351,20 @@ public class RobotContainer
         s_shooter.setDefaultCommand(
             Commands.run(() -> 
             {
+                if (DriverStation.isAutonomousEnabled()) {
+                    return;
+                }
+
                 boolean manualShooterEnabled = SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);     // Tuning mode
                 boolean shooterIdleAt25Enabled = SmartDashboard.getBoolean(SHOOTER_IDLE_AT_25_KEY, true);      // Elastic Switch
+                shooterIdlePercent = MathUtil.clamp(
+                    SmartDashboard.getNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent),
+                    0.0,
+                    1.0);
 
                 if (shooterIdleAt25Enabled && !manualShooterEnabled) 
                 {
-                    s_shooter.setShooterPercent(0.25);
+                    s_shooter.setShooterPercent(shooterIdlePercent);
                 } 
                 else 
                 {
@@ -366,35 +381,6 @@ public class RobotContainer
         ); 
         
         drivetrain.registerTelemetry(logger::telemeterize);
-
-        /*
-        Command feederPulse = Commands.run(() -> {
-            feederPulseEnabled = SmartDashboard.getBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
-            if (!feederPulseEnabled) {
-                s_feeder.setFeederPercent(1);
-                return;
-            }
-
-            double t = feederPulseTimer.get();
-            double cycleSeconds = FEEDER_PULSE_ON_SECONDS + FEEDER_PULSE_OFF_SECONDS;
-            if (t >= cycleSeconds) {
-                feederPulseTimer.reset();
-                t = 0.0;
-            }
-
-            if (t < FEEDER_PULSE_ON_SECONDS) {
-                s_feeder.setFeederPercent(.5);
-            } else {
-                s_feeder.stop();
-            }
-        }, s_feeder).beforeStarting(() -> {
-            feederPulseTimer.reset();
-            feederPulseTimer.start();
-        }).finallyDo((interrupted) -> {
-            feederPulseTimer.stop();
-            s_feeder.stop();
-        });
-        */
 
         // Assign Driver Controls:
         driver.b().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));    // Reset the field-centric heading on left bumper press.
@@ -417,17 +403,6 @@ public class RobotContainer
             s_shooter.stop();
             driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
         }));
-
-        /*
-        driver.leftTrigger().whileTrue(Commands.run(() -> { // NORMAL SHOT
-            s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE);    // was 69 in match 72
-            s_hood.setAngle(Constants.Hood.MIN_ANGLE);
-            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
-        }, s_shooter, s_hood).finallyDo((interrupted) -> {
-            s_shooter.stop();
-            driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
-        }));
-        */
 
         driver.leftTrigger().whileTrue(new AutoAim(
             drivetrain,
@@ -479,6 +454,16 @@ public class RobotContainer
             boolean enabled = SmartDashboard.getBoolean(AUTO_AIM_ENABLED_KEY, true);
             SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, !enabled);
         }));
+        operator.povLeft().onTrue(Commands.runOnce(() -> drivetrain.adjustAutoAimHeadingOffsetDeg(2.5)));
+        operator.povRight().onTrue(Commands.runOnce(() -> drivetrain.adjustAutoAimHeadingOffsetDeg(-2.5)));
+        operator.povUp().onTrue(Commands.runOnce(() -> {
+            shooterIdlePercent = MathUtil.clamp(shooterIdlePercent + SHOOTER_PERCENT_STEP, 0.0, 1.0);
+            SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
+        }));
+        operator.povDown().onTrue(Commands.runOnce(() -> {
+            shooterIdlePercent = MathUtil.clamp(shooterIdlePercent - SHOOTER_PERCENT_STEP, 0.0, 1.0);
+            SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
+        }));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -486,7 +471,18 @@ public class RobotContainer
     public Command getAutonomousCommand() 
     {
         Command selectedAuto = autoChooser.getSelected();
-        return selectedAuto != null ? selectedAuto : Commands.none();
+        if (selectedAuto == null) {
+            return Commands.none();
+        }
+
+        if (selectedAuto instanceof PathPlannerAuto pathPlannerAuto) {
+            return Commands.sequence(
+                Commands.runOnce(() -> s_vision.markPoseSeededExternally(), s_vision),
+                selectedAuto
+            );
+        }
+
+        return selectedAuto;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -530,8 +526,8 @@ public class RobotContainer
             Commands.sequence(
                 new WaitCommand(1.5),                                       // TODO - Adjust shooter startup time
                 new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(3)    // TODO - Adjust period that shooter shoots for
+                )
             )
-        )
         );
 
         NamedCommands.registerCommand(
@@ -552,7 +548,7 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "SpoolShooterToShootingSpeed",
         new SequentialCommandGroup(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(90.0).speedRps())) // TODO - Adjust shooter distance and speed if needed
+            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(87.8).speedRps())) // TODO - Adjust shooter distance and speed if needed
             )
         );
 

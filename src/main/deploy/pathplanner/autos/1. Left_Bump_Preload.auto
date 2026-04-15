@@ -7,6 +7,12 @@
         {
           "type": "named",
           "data": {
+            "name": "SpoolShooterToShootingSpeed"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
             "name": "DeployIntake"
           }
         },

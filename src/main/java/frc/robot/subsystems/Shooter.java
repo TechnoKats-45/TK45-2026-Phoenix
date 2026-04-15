@@ -127,6 +127,11 @@ public class Shooter extends SubsystemBase
         return Math.abs(getSpeed() - currentSpeedSetpointRps) <= Constants.Shooter.SPEED_TOLERANCE_RPS;
     }
 
+    public double getSetpointRps()
+    {
+        return currentSpeedSetpointRps;
+    }
+
     private void configureFollowers()
     {
         StatusCode rightMiddleStatus = right_middle_shooter.setControl(
