@@ -9,6 +9,7 @@ import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.TorqueCurrentConfigs;
+import com.ctre.phoenix6.controls.CoastOut;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -24,17 +25,17 @@ import frc.robot.Constants;
 
 public class Shooter extends SubsystemBase 
 {
-    private static final double STATOR_CURRENT_LIMIT_AMPS = 30.0;
-    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 20.0;
+    private static final double STATOR_CURRENT_LIMIT_AMPS = 80.0;
+    private static final double SUPPLY_CURRENT_LIMIT_AMPS = 40.0;
     private static final double SENSOR_TO_MECHANISM_RATIO = 1.0;
 
     // Suggested starting values for VelocityTorqueCurrentFOC.
     // These gains are in torque-current units, so they are much smaller than velocity-voltage gains.
-    private static final double SLOT0_KS = 3.0;
-    private static final double SLOT0_KP = 2;    // was 1.45
+    private static final double SLOT0_KS = .1;
+    private static final double SLOT0_KP = 15; // was 6
     private static final double SLOT0_KI = 0.0;
     private static final double SLOT0_KD = 0.0;
-    private static final double SLOT0_KV = 0.26;
+    private static final double SLOT0_KV = 0; // was 0.26
     private static final double SLOT0_KA = 0.0;
     private static final double REQUEST_FEEDFORWARD_AMPS = 2.0;
     private static final double FOLLOWER_STATUS_UPDATE_HZ = 100.0;
@@ -50,6 +51,7 @@ public class Shooter extends SubsystemBase
     private final TalonFX left_middle_shooter;
     private final TalonFX right_middle_shooter;
     private final VelocityTorqueCurrentFOC velocityRequest = new VelocityTorqueCurrentFOC(0);
+    private final CoastOut coastRequest = new CoastOut();
 
     public Shooter() 
     {
@@ -78,7 +80,7 @@ public class Shooter extends SubsystemBase
         StatusCode status = left_shooter.setControl(
                 velocityRequest
                         .withVelocity(RotationsPerSecond.of(speedRPS))
-                        .withFeedForward(REQUEST_FEEDFORWARD_AMPS));
+                        .withFeedForward(REQUEST_FEEDFORWARD_AMPS));    // currently 2A
         if (!status.isOK()) {
             System.out.println("Left Shooter setControl failed: " + status);
         }
@@ -105,7 +107,10 @@ public class Shooter extends SubsystemBase
 
     public void stop()
     {
-        left_shooter.set(0);
+        StatusCode status = left_shooter.setControl(coastRequest);
+        if (!status.isOK()) {
+            System.out.println("Left Shooter coast setControl failed: " + status);
+        }
         currentSpeedSetpointRps = 0.0;
     }
 
@@ -199,7 +204,7 @@ public class Shooter extends SubsystemBase
     {
         SmartDashboard.putNumber("Shooter Current Speed RPS", getSpeed());
         SmartDashboard.putNumber("Shooter Speed Setpoint RPS", currentSpeedSetpointRps);
-        SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());
+        // SmartDashboard.putBoolean("Shooter Is At Speed", isAtSpeed());
         SmartDashboard.putNumber("Shooter Current", left_shooter.getSupplyCurrent().getValueAsDouble()
             + left_middle_shooter.getSupplyCurrent().getValueAsDouble()
                 + right_shooter.getSupplyCurrent().getValueAsDouble()

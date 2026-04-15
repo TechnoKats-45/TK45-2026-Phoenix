@@ -81,9 +81,9 @@ public class Constants
         {
             // Format: distance_inches -> ShotProfile(hood_deg, speed_rps)
             // Example: DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(22.0, 70.0));
-            DISTANCE_ANGLE_SPEED.put(87.8,new ShotProfile(Hood.MIN_ANGLE,49));
-            DISTANCE_ANGLE_SPEED.put(110.0, new ShotProfile(Hood.MIN_ANGLE,53.5));
-            DISTANCE_ANGLE_SPEED.put(150.0, new ShotProfile(Hood.MIN_ANGLE, 70.0));
+            DISTANCE_ANGLE_SPEED.put(79.0, new ShotProfile(Hood.MIN_ANGLE, 50.54));
+            DISTANCE_ANGLE_SPEED.put(109.0, new ShotProfile(Hood.MIN_ANGLE, 65.54));
+            DISTANCE_ANGLE_SPEED.put(128.0, new ShotProfile(Hood.MIN_ANGLE, 66.54));
         }
 
         public static ShotProfile getShotProfileForDistanceInches(double distanceInches) {

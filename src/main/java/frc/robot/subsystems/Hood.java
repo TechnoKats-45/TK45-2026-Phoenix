@@ -67,7 +67,7 @@ public class Hood extends SubsystemBase
     {
         currentAngleSetPoint = angle;
         hood_motor.setControl(motionMagicVoltage.withPosition(toMotorPosition(angle)));
-        SmartDashboard.putNumber("Hood Set Point", angle);
+        // SmartDashboard.putNumber("Hood Set Point", angle);
     }
 
     public double getAngle()
@@ -131,8 +131,8 @@ public class Hood extends SubsystemBase
     public void printDiagnostics()
     {
         SmartDashboard.putNumber("Hood Angle", getAngle());
-        SmartDashboard.putNumber("Hood Set Point", currentAngleSetPoint);
-        SmartDashboard.putBoolean("Hood Is At Angle", isAligned());
+        // SmartDashboard.putNumber("Hood Set Point", currentAngleSetPoint);
+        // SmartDashboard.putBoolean("Hood Is At Angle", isAligned());
         SmartDashboard.putNumber("Hood Current Draw Amps", hood_motor.getSupplyCurrent().getValueAsDouble());
     }
 }

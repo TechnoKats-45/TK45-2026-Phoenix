@@ -3,45 +3,45 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 3.6837983870967745,
-        "y": 5.095604838709678
+        "x": 3.6628522727272728,
+        "y": 5.550102272727272
       },
       "prevControl": null,
       "nextControl": {
-        "x": 4.6837983870967745,
-        "y": 5.095604838709678
+        "x": 4.662852272727273,
+        "y": 5.550102272727272
       },
       "isLocked": false,
       "linkedName": "Start_Left_Bump_Hub_MidRush"
     },
     {
       "anchor": {
-        "x": 6.221935483870968,
-        "y": 6.141580645161291
+        "x": 6.198329545454545,
+        "y": 6.230352272727273
       },
       "prevControl": {
-        "x": 5.330961375164481,
-        "y": 5.6875265320704855
+        "x": 5.006036509721718,
+        "y": 5.570785912534644
       },
       "nextControl": {
-        "x": 6.982645161290322,
-        "y": 6.529249999999999
+        "x": 6.6827499999999995,
+        "y": 6.4983295454545456
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 7.377629032258064,
-        "y": 6.141580645161291
+        "x": 7.3629999999999995,
+        "y": 6.230352272727273
       },
       "prevControl": {
-        "x": 7.158193548387097,
-        "y": 6.353701612903226
+        "x": 6.907836302254375,
+        "y": 6.58436848208498
       },
       "nextControl": {
-        "x": 7.5970645161290316,
-        "y": 5.929459677419356
+        "x": 7.641284090909091,
+        "y": 6.013909090909091
       },
       "isLocked": false,
       "linkedName": null
@@ -96,28 +96,28 @@
     },
     {
       "anchor": {
-        "x": 5.695290322580645,
+        "x": 5.610840909090908,
         "y": 5.176064516129032
       },
       "prevControl": {
-        "x": 5.997534254828062,
-        "y": 4.888783154784953
+        "x": 6.195646583023406,
+        "y": 4.917733635807303
       },
       "nextControl": {
-        "x": 4.956524193548387,
-        "y": 5.878258064516129
+        "x": 4.6007727272727275,
+        "y": 5.62225
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 2.5427338709677425,
-        "y": 5.095604838709678
+        "x": 1.6633295454545451,
+        "y": 5.982988636363636
       },
       "prevControl": {
-        "x": 3.4277903225806456,
-        "y": 5.234580645161292
+        "x": 2.5291022727272723,
+        "y": 5.890227272727272
       },
       "nextControl": null,
       "isLocked": false,
@@ -149,24 +149,11 @@
   "constraintZones": [
     {
       "name": "Constraints Zone",
-      "minWaypointRelativePos": 0,
-      "maxWaypointRelativePos": 0.6371463714637142,
+      "minWaypointRelativePos": 0.8983957219251328,
+      "maxWaypointRelativePos": 5.044117647058817,
       "constraints": {
-        "maxVelocity": 1.5,
-        "maxAcceleration": 1.5,
-        "maxAngularVelocity": 540.0,
-        "maxAngularAcceleration": 720.0,
-        "nominalVoltage": 12.0,
-        "unlimited": false
-      }
-    },
-    {
-      "name": "Constraints Zone",
-      "minWaypointRelativePos": 6.104551045510439,
-      "maxWaypointRelativePos": 6.621156211562119,
-      "constraints": {
-        "maxVelocity": 1.5,
-        "maxAcceleration": 1.5,
+        "maxVelocity": 1.0,
+        "maxAcceleration": 3.0,
         "maxAngularVelocity": 540.0,
         "maxAngularAcceleration": 720.0,
         "nominalVoltage": 12.0,
@@ -200,7 +187,7 @@
     },
     {
       "name": "SpoolShooterToShootingSpeed",
-      "waypointRelativePos": 6.0012300123001,
+      "waypointRelativePos": 6.307486631016047,
       "endWaypointRelativePos": null,
       "command": {
         "type": "named",

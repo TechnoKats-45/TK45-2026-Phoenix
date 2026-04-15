@@ -272,18 +272,18 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
             setBumpTraversalActive(false);
         }
 
-        SmartDashboard.putNumber("Drivetrain/RollRawDeg", getRollDeg());
-        SmartDashboard.putNumber("Drivetrain/PitchRawDeg", getPitchDeg());
-        SmartDashboard.putNumber("Drivetrain/RollDeg", rollTiltDeg);
-        SmartDashboard.putNumber("Drivetrain/PitchDeg", pitchTiltDeg);
-        SmartDashboard.putNumber("Drivetrain/RollTiltFromFlatDeg", rollTiltDeg);
-        SmartDashboard.putNumber("Drivetrain/PitchTiltFromFlatDeg", pitchTiltDeg);
-        SmartDashboard.putNumber("Drivetrain/TiltMagnitudeDeg", tiltMagnitudeDeg);
-        SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
+        // SmartDashboard.putNumber("Drivetrain/RollRawDeg", getRollDeg());
+        // SmartDashboard.putNumber("Drivetrain/PitchRawDeg", getPitchDeg());
+        // SmartDashboard.putNumber("Drivetrain/RollDeg", rollTiltDeg);
+        // SmartDashboard.putNumber("Drivetrain/PitchDeg", pitchTiltDeg);
+        // SmartDashboard.putNumber("Drivetrain/RollTiltFromFlatDeg", rollTiltDeg);
+        // SmartDashboard.putNumber("Drivetrain/PitchTiltFromFlatDeg", pitchTiltDeg);
+        // SmartDashboard.putNumber("Drivetrain/TiltMagnitudeDeg", tiltMagnitudeDeg);
+        // SmartDashboard.putBoolean("Drivetrain/OnBump", bumpTraversalActive);
         SmartDashboard.putBoolean(TILT_BASED_VISION_UPDATES_ENABLED_KEY, tiltBasedVisionUpdatesEnabled);
-        SmartDashboard.putBoolean("Drivetrain/AllowVisionPoseUpdates", shouldAllowVisionPoseUpdate());
-        SmartDashboard.putBoolean("Drivetrain/ForceVisionPose", shouldForceVisionPose());
-        SmartDashboard.putBoolean("Drivetrain/AllowVisionRotation", shouldUseVisionRotation());
+        // SmartDashboard.putBoolean("Drivetrain/AllowVisionPoseUpdates", shouldAllowVisionPoseUpdate());
+        // SmartDashboard.putBoolean("Drivetrain/ForceVisionPose", shouldForceVisionPose());
+        // SmartDashboard.putBoolean("Drivetrain/AllowVisionRotation", shouldUseVisionRotation());
     }
 
     private void updateMotionStats() {
@@ -311,10 +311,10 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
         lastRobotAngularSpeedRadPerSec = angularSpeedRadPerSec;
         lastMotionUpdateSec = nowSec;
 
-        SmartDashboard.putNumber("Drivetrain/LinearSpeedMps", robotLinearSpeedMetersPerSec);
-        SmartDashboard.putNumber("Drivetrain/LinearAccelMpsSq", robotLinearAccelerationMetersPerSecSq);
-        SmartDashboard.putNumber("Drivetrain/AngularSpeedRadPerSec", angularSpeedRadPerSec);
-        SmartDashboard.putNumber("Drivetrain/AngularAccelRadPerSecSq", robotAngularAccelerationRadPerSecSq);
+        // SmartDashboard.putNumber("Drivetrain/LinearSpeedMps", robotLinearSpeedMetersPerSec);
+        // SmartDashboard.putNumber("Drivetrain/LinearAccelMpsSq", robotLinearAccelerationMetersPerSecSq);
+        // SmartDashboard.putNumber("Drivetrain/AngularSpeedRadPerSec", angularSpeedRadPerSec);
+        // SmartDashboard.putNumber("Drivetrain/AngularAccelRadPerSecSq", robotAngularAccelerationRadPerSecSq);
     }
 
     private void setBumpTraversalActive(boolean active) {
@@ -432,7 +432,7 @@ public class Drivetrain extends TunerSwerveDrivetrain implements Subsystem
 
         double headingErrorDeg = Math.toDegrees(
                 MathUtil.angleModulus(autoAimTargetHeading.minus(getState().Pose.getRotation()).getRadians()));
-        SmartDashboard.putNumber("Drivetrain/AutoAimHeadingOffsetDeg", autoAimHeadingOffsetDeg);
+        // SmartDashboard.putNumber("Drivetrain/AutoAimHeadingOffsetDeg", autoAimHeadingOffsetDeg);
         return Math.abs(headingErrorDeg) <= autoAimToleranceDeg;
     }
 

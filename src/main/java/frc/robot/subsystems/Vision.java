@@ -33,6 +33,7 @@ import frc.robot.Constants;
 import frc.robot.FieldConstants;
 
 public class Vision extends SubsystemBase {
+    private static final String DEBUG_OUTPUT_ENABLED_KEY = "Vision/DebugEnabled";
     private static final String DYNAMICS_FILTER_ENABLED_KEY = "Vision/Filter/RobotDynamicsEnabled";
     private static final String MAX_ACCEPTABLE_VELOCITY_MPS_KEY = "Vision/Filter/MaxRobotVelocityMps";
     private static final String MAX_ACCEPTABLE_ACCEL_MPS2_KEY = "Vision/Filter/MaxRobotAccelerationMpsSq";
@@ -84,6 +85,7 @@ public class Vision extends SubsystemBase {
     private final Map<String, Double> lastAcceptedTimestamps = new HashMap<>();
     private final Map<String, Integer> fuseCounts = new HashMap<>();
     private boolean poseSeededFromVision = false;
+    private boolean debugOutputEnabled = false;
 
     // Vision fusion tuning constants (hardcoded; not configurable via SmartDashboard)
     private static final double MAX_TRANSLATION_JUMP_M = 3.0;
@@ -137,14 +139,15 @@ public class Vision extends SubsystemBase {
                         layout,
                         false));
 
-        SmartDashboard.putBoolean("Vision/LastResetUsedVision", false);
+        SmartDashboard.putBoolean(DEBUG_OUTPUT_ENABLED_KEY, false);
+        putDebugBoolean("Vision/LastResetUsedVision", false);
         SmartDashboard.putBoolean(DYNAMICS_FILTER_ENABLED_KEY, true);
         SmartDashboard.putNumber(MAX_ACCEPTABLE_VELOCITY_MPS_KEY, DEFAULT_MAX_ACCEPTABLE_VELOCITY_MPS);
         SmartDashboard.putNumber(MAX_ACCEPTABLE_ACCEL_MPS2_KEY, DEFAULT_MAX_ACCEPTABLE_ACCEL_MPS2);
         SmartDashboard.putNumber(
                 MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2_KEY,
                 DEFAULT_MAX_ACCEPTABLE_ANGULAR_ACCEL_RADPS2);
-        SmartDashboard.putBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, false);
+        putDebugBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, false);
     }
 
     private CameraPoseSource createCameraSource(
@@ -164,6 +167,8 @@ public class Vision extends SubsystemBase {
 
     @Override
     public void periodic() {
+        debugOutputEnabled = SmartDashboard.getBoolean(DEBUG_OUTPUT_ENABLED_KEY, false);
+
         for (CameraPoseSource source : cameraPoseSources) {
             processCamera(source);
         }
@@ -174,14 +179,14 @@ public class Vision extends SubsystemBase {
                 .getDistance(hubCenter.toPose2d().getTranslation());
         Optional<HubObservation> hubObservation = getHubObservation(alliance);
 
-        SmartDashboard.putString("Vision/Alliance", alliance.map(Enum::name).orElse("Unknown"));
-        SmartDashboard.putNumber("Vision/TargetDistanceMeters", poseDistanceMeters);
+        putDebugString("Vision/Alliance", alliance.map(Enum::name).orElse("Unknown"));
+        putDebugNumber("Vision/TargetDistanceMeters", poseDistanceMeters);
         SmartDashboard.putNumber("Vision/TargetDistanceInches", Units.metersToInches(poseDistanceMeters));
-        SmartDashboard.putBoolean("Vision/HasObservedTargetDistance", hubObservation.isPresent());
-        SmartDashboard.putNumber(
+        putDebugBoolean("Vision/HasObservedTargetDistance", hubObservation.isPresent());
+        putDebugNumber(
                 "Vision/ObservedTargetDistanceMeters",
                 hubObservation.map(HubObservation::rangeToHubCenterMeters).orElse(-1.0));
-        SmartDashboard.putNumber(
+        putDebugNumber(
                 "Vision/ObservedTargetDistanceInches",
                 hubObservation.map(obs -> Units.metersToInches(obs.rangeToHubCenterMeters())).orElse(-1.0));
     }
@@ -335,148 +340,146 @@ public class Vision extends SubsystemBase {
         PhotonPoseEstimator estimator = source.estimator();
         List<PhotonPipelineResult> results = camera.getAllUnreadResults();
 
-        SmartDashboard.putNumber("Vision/" + label + "/UnreadResults", results.size());
+        putDebugNumber("Vision/" + label + "/UnreadResults", results.size());
         estimator.setReferencePose(drivetrain.getState().Pose);
 
         if (results.isEmpty()) {
-            SmartDashboard.putBoolean("Vision/" + label + "/HasTarget", false);
-            SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugBoolean("Vision/" + label + "/HasTarget", false);
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
             return;
         }
 
         PhotonPipelineResult latest = results.get(results.size() - 1);
         setLatestStoredResult(label, latest);
+        PhotonPipelineResult result = latest;
+        putDebugBoolean("Vision/" + label + "/HasTarget", result.hasTargets());
 
-        for (PhotonPipelineResult result : results) {
-            SmartDashboard.putBoolean("Vision/" + label + "/HasTarget", result.hasTargets());
-
-            if (!result.hasTargets()) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                continue;
-            }
-
-            if (result.getBestTarget() != null) {
-                SmartDashboard.putNumber("Vision/" + label + "/BestTagId", result.getBestTarget().getFiducialId());
-                SmartDashboard.putNumber("Vision/" + label + "/BestTagAmbiguity", result.getBestTarget().getPoseAmbiguity());
-                SmartDashboard.putNumber(
-                        "Vision/" + label + "/BestTagDistanceM",
-                        result.getBestTarget().getBestCameraToTarget().getTranslation().getNorm());
-            }
-
-            Optional<EstimatedRobotPose> estimate = estimator.update(result);
-            if (estimate.isEmpty()) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "NoEstimate");
-                continue;
-            }
-
-            double estimateTimestamp = estimate.get().timestampSeconds;
-            double nowSec = Timer.getFPGATimestamp();
-            double measurementAgeSec = nowSec - estimateTimestamp;
-            SmartDashboard.putNumber("Vision/" + label + "/MeasurementAgeSec", measurementAgeSec);
-            if (measurementAgeSec > MAX_MEASUREMENT_AGE_SEC) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "MeasurementTooOld");
-                continue;
-            }
-
-            if (estimateTimestamp <= getLastAcceptedTimestamp(label)) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "StaleTimestamp");
-                continue;
-            }
-
-            MeasurementStats measurementStats = getMeasurementStats(estimate.get().targetsUsed);
-            publishMeasurementStats(label, measurementStats);
-            String qualityRejectReason = getQualityRejectReason(measurementStats);
-            if (qualityRejectReason != null) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", qualityRejectReason);
-                continue;
-            }
-
-            MotionStats motionStats = getMotionStats();
-            publishMotionStats(label, motionStats);
-            String motionRejectReason = getMotionRejectReason(motionStats);
-            if (motionRejectReason != null) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", motionRejectReason);
-                continue;
-            }
-
-            boolean allowVisionPoseUpdate = drivetrain.shouldAllowVisionPoseUpdate();
-            SmartDashboard.putBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, allowVisionPoseUpdate);
-            SmartDashboard.putBoolean("Vision/" + label + "/RobotStationary", drivetrain.isEffectivelyStationary());
-
-            String allianceSideRejectReason = getAllianceSideRejectReason(estimate.get().targetsUsed);
-            if (allianceSideRejectReason != null) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", allianceSideRejectReason);
-                continue;
-            }
-
-            Pose2d estimatedPose = estimate.get().estimatedPose.toPose2d();
-            if (!isInFieldBounds(estimatedPose)) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "OutOfFieldBounds");
-                continue;
-            }
-
-            if (!ENABLE_POSE_FUSION) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "FusionDisabled");
-                continue;
-            }
-
-            boolean useVisionRotation = drivetrain.shouldUseVisionRotation();
-            boolean forceVisionPose = drivetrain.shouldForceVisionPose();
-            SmartDashboard.putBoolean("Vision/" + label + "/UseVisionRotation", useVisionRotation);
-            SmartDashboard.putBoolean("Vision/" + label + "/ForceVisionPose", forceVisionPose);
-
-            if (!poseSeededFromVision && ENABLE_INITIAL_POSE_SEED) {
-                drivetrain.resetPoseFromVision(estimatedPose, useVisionRotation);
-                poseSeededFromVision = true;
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "");
-                continue;
-            }
-
-            Pose2d currentPose = drivetrain.getState().Pose;
-            double transJump = estimatedPose.getTranslation().getDistance(currentPose.getTranslation());
-            double rotJumpDeg = Math.abs(estimatedPose.getRotation().minus(currentPose.getRotation()).getDegrees());
-            boolean shouldRecoverPose = shouldRecoverFromLargePoseError(measurementStats, transJump);
-            SmartDashboard.putBoolean("Vision/" + label + "/PoseRecoveryEligible", shouldRecoverPose);
-            if (!shouldRecoverPose && (transJump > MAX_TRANSLATION_JUMP_M || rotJumpDeg > MAX_ROTATION_JUMP_DEG)) {
-                SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", false);
-                SmartDashboard.putNumber("Vision/" + label + "/RejectedTransJumpM", transJump);
-                SmartDashboard.putNumber("Vision/" + label + "/RejectedRotJumpDeg", rotJumpDeg);
-                SmartDashboard.putString("Vision/" + label + "/RejectReason", "JumpFilter");
-                continue;
-            }
-
-            Pose2d fusedPose = useVisionRotation
-                    ? estimatedPose
-                    : drivetrain.useGyroHeadingForPose(estimatedPose);
-            Matrix<N3, N1> stdDevs = getVisionStdDevs(result);
-
-            if (forceVisionPose || shouldHardResetDuringBump(result, transJump) || shouldRecoverPose) {
-                drivetrain.resetPoseFromVision(fusedPose, useVisionRotation);
-            } else {
-                drivetrain.addVisionMeasurement(fusedPose, estimateTimestamp, stdDevs);
-            }
-
-            SmartDashboard.putBoolean("Vision/" + label + "/EstimateAccepted", true);
-            SmartDashboard.putString("Vision/" + label + "/RejectReason", "");
-            SmartDashboard.putNumber("Vision/" + label + "/TagCount", result.targets.size());
-            SmartDashboard.putNumber("Vision/" + label + "/X", estimatedPose.getX());
-            SmartDashboard.putNumber("Vision/" + label + "/Y", estimatedPose.getY());
-            SmartDashboard.putNumber("Vision/" + label + "/ThetaDeg", estimatedPose.getRotation().getDegrees());
-            SmartDashboard.putNumber("Vision/" + label + "/TimestampSec", estimateTimestamp);
-
-            incrementFuseCount(label);
-            SmartDashboard.putNumber("Vision/" + label + "/FuseCount", getFuseCount(label));
-            setLastAcceptedTimestamp(label, estimateTimestamp);
+        if (!result.hasTargets()) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            return;
         }
+
+        if (result.getBestTarget() != null) {
+            putDebugNumber("Vision/" + label + "/BestTagId", result.getBestTarget().getFiducialId());
+            putDebugNumber("Vision/" + label + "/BestTagAmbiguity", result.getBestTarget().getPoseAmbiguity());
+            putDebugNumber(
+                    "Vision/" + label + "/BestTagDistanceM",
+                    result.getBestTarget().getBestCameraToTarget().getTranslation().getNorm());
+        }
+
+        Optional<EstimatedRobotPose> estimate = estimator.update(result);
+        if (estimate.isEmpty()) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", "NoEstimate");
+            return;
+        }
+
+        double estimateTimestamp = estimate.get().timestampSeconds;
+        double nowSec = Timer.getFPGATimestamp();
+        double measurementAgeSec = nowSec - estimateTimestamp;
+        putDebugNumber("Vision/" + label + "/MeasurementAgeSec", measurementAgeSec);
+        if (measurementAgeSec > MAX_MEASUREMENT_AGE_SEC) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", "MeasurementTooOld");
+            return;
+        }
+
+        if (estimateTimestamp <= getLastAcceptedTimestamp(label)) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", "StaleTimestamp");
+            return;
+        }
+
+        MeasurementStats measurementStats = getMeasurementStats(estimate.get().targetsUsed);
+        publishMeasurementStats(label, measurementStats);
+        String qualityRejectReason = getQualityRejectReason(measurementStats);
+        if (qualityRejectReason != null) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", qualityRejectReason);
+            return;
+        }
+
+        MotionStats motionStats = getMotionStats();
+        publishMotionStats(label, motionStats);
+        String motionRejectReason = getMotionRejectReason(motionStats);
+        if (motionRejectReason != null) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", motionRejectReason);
+            return;
+        }
+
+        boolean allowVisionPoseUpdate = drivetrain.shouldAllowVisionPoseUpdate();
+        putDebugBoolean(VISION_POSE_UPDATES_ALLOWED_KEY, allowVisionPoseUpdate);
+        putDebugBoolean("Vision/" + label + "/RobotStationary", drivetrain.isEffectivelyStationary());
+
+        String allianceSideRejectReason = getAllianceSideRejectReason(estimate.get().targetsUsed);
+        if (allianceSideRejectReason != null) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", allianceSideRejectReason);
+            return;
+        }
+
+        Pose2d estimatedPose = estimate.get().estimatedPose.toPose2d();
+        if (!isInFieldBounds(estimatedPose)) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", "OutOfFieldBounds");
+            return;
+        }
+
+        if (!ENABLE_POSE_FUSION) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugString("Vision/" + label + "/RejectReason", "FusionDisabled");
+            return;
+        }
+
+        boolean useVisionRotation = drivetrain.shouldUseVisionRotation();
+        boolean forceVisionPose = drivetrain.shouldForceVisionPose();
+        putDebugBoolean("Vision/" + label + "/UseVisionRotation", useVisionRotation);
+        putDebugBoolean("Vision/" + label + "/ForceVisionPose", forceVisionPose);
+
+        if (!poseSeededFromVision && ENABLE_INITIAL_POSE_SEED) {
+            drivetrain.resetPoseFromVision(estimatedPose, useVisionRotation);
+            poseSeededFromVision = true;
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", true);
+            putDebugString("Vision/" + label + "/RejectReason", "");
+            return;
+        }
+
+        Pose2d currentPose = drivetrain.getState().Pose;
+        double transJump = estimatedPose.getTranslation().getDistance(currentPose.getTranslation());
+        double rotJumpDeg = Math.abs(estimatedPose.getRotation().minus(currentPose.getRotation()).getDegrees());
+        boolean shouldRecoverPose = shouldRecoverFromLargePoseError(measurementStats, transJump);
+        putDebugBoolean("Vision/" + label + "/PoseRecoveryEligible", shouldRecoverPose);
+        if (!shouldRecoverPose && (transJump > MAX_TRANSLATION_JUMP_M || rotJumpDeg > MAX_ROTATION_JUMP_DEG)) {
+            putDebugBoolean("Vision/" + label + "/EstimateAccepted", false);
+            putDebugNumber("Vision/" + label + "/RejectedTransJumpM", transJump);
+            putDebugNumber("Vision/" + label + "/RejectedRotJumpDeg", rotJumpDeg);
+            putDebugString("Vision/" + label + "/RejectReason", "JumpFilter");
+            return;
+        }
+
+        Pose2d fusedPose = useVisionRotation
+                ? estimatedPose
+                : drivetrain.useGyroHeadingForPose(estimatedPose);
+        Matrix<N3, N1> stdDevs = getVisionStdDevs(result);
+
+        if (forceVisionPose || shouldHardResetDuringBump(result, transJump) || shouldRecoverPose) {
+            drivetrain.resetPoseFromVision(fusedPose, useVisionRotation);
+        } else {
+            drivetrain.addVisionMeasurement(fusedPose, estimateTimestamp, stdDevs);
+        }
+
+        putDebugBoolean("Vision/" + label + "/EstimateAccepted", true);
+        putDebugString("Vision/" + label + "/RejectReason", "");
+        putDebugNumber("Vision/" + label + "/TagCount", result.targets.size());
+        putDebugNumber("Vision/" + label + "/X", estimatedPose.getX());
+        putDebugNumber("Vision/" + label + "/Y", estimatedPose.getY());
+        putDebugNumber("Vision/" + label + "/ThetaDeg", estimatedPose.getRotation().getDegrees());
+        putDebugNumber("Vision/" + label + "/TimestampSec", estimateTimestamp);
+
+        incrementFuseCount(label);
+        putDebugNumber("Vision/" + label + "/FuseCount", getFuseCount(label));
+        setLastAcceptedTimestamp(label, estimateTimestamp);
     }
 
     private Matrix<N3, N1> getVisionStdDevs(PhotonPipelineResult result) {
@@ -541,11 +544,11 @@ public class Vision extends SubsystemBase {
     }
 
     private void publishMeasurementStats(String label, MeasurementStats stats) {
-        SmartDashboard.putNumber("Vision/" + label + "/UsedTagCount", stats.tagCount());
-        SmartDashboard.putNumber("Vision/" + label + "/ClosestTagDistanceM", stats.closestTagDistanceMeters());
-        SmartDashboard.putNumber("Vision/" + label + "/AverageTagDistanceM", stats.averageTagDistanceMeters());
-        SmartDashboard.putNumber("Vision/" + label + "/FarthestTagDistanceM", stats.farthestTagDistanceMeters());
-        SmartDashboard.putNumber("Vision/" + label + "/MaxTagAmbiguity", stats.maxAmbiguity());
+        putDebugNumber("Vision/" + label + "/UsedTagCount", stats.tagCount());
+        putDebugNumber("Vision/" + label + "/ClosestTagDistanceM", stats.closestTagDistanceMeters());
+        putDebugNumber("Vision/" + label + "/AverageTagDistanceM", stats.averageTagDistanceMeters());
+        putDebugNumber("Vision/" + label + "/FarthestTagDistanceM", stats.farthestTagDistanceMeters());
+        putDebugNumber("Vision/" + label + "/MaxTagAmbiguity", stats.maxAmbiguity());
     }
 
     private MotionStats getMotionStats() {
@@ -556,9 +559,9 @@ public class Vision extends SubsystemBase {
     }
 
     private void publishMotionStats(String label, MotionStats stats) {
-        SmartDashboard.putNumber("Vision/" + label + "/RobotVelocityMps", stats.robotVelocityMetersPerSec());
-        SmartDashboard.putNumber("Vision/" + label + "/RobotAccelerationMpsSq", stats.robotAccelerationMetersPerSecSq());
-        SmartDashboard.putNumber(
+        putDebugNumber("Vision/" + label + "/RobotVelocityMps", stats.robotVelocityMetersPerSec());
+        putDebugNumber("Vision/" + label + "/RobotAccelerationMpsSq", stats.robotAccelerationMetersPerSecSq());
+        putDebugNumber(
                 "Vision/" + label + "/RobotAngularAccelerationRadPerSecSq",
                 stats.robotAngularAccelerationRadPerSecSq());
     }
@@ -693,6 +696,8 @@ public class Vision extends SubsystemBase {
     }
 
     public boolean resetPoseFromVision() {
+        debugOutputEnabled = SmartDashboard.getBoolean(DEBUG_OUTPUT_ENABLED_KEY, false);
+
         Optional<EstimatedRobotPose> best = Optional.empty();
 
         for (CameraPoseSource source : cameraPoseSources) {
@@ -700,22 +705,22 @@ public class Vision extends SubsystemBase {
         }
 
         if (best.isEmpty()) {
-            SmartDashboard.putBoolean("Vision/LastResetUsedVision", false);
+            putDebugBoolean("Vision/LastResetUsedVision", false);
             return false;
         }
 
         Pose2d pose = best.get().estimatedPose.toPose2d();
         if (!isInFieldBounds(pose)) {
-            SmartDashboard.putBoolean("Vision/LastResetUsedVision", false);
+            putDebugBoolean("Vision/LastResetUsedVision", false);
             return false;
         }
 
         drivetrain.resetPoseFromVision(pose, drivetrain.shouldUseVisionRotation());
         poseSeededFromVision = true;
-        SmartDashboard.putBoolean("Vision/LastResetUsedVision", true);
-        SmartDashboard.putNumber("Vision/LastResetX", pose.getX());
-        SmartDashboard.putNumber("Vision/LastResetY", pose.getY());
-        SmartDashboard.putNumber("Vision/LastResetThetaDeg", pose.getRotation().getDegrees());
+        putDebugBoolean("Vision/LastResetUsedVision", true);
+        putDebugNumber("Vision/LastResetX", pose.getX());
+        putDebugNumber("Vision/LastResetY", pose.getY());
+        putDebugNumber("Vision/LastResetThetaDeg", pose.getRotation().getDegrees());
         return true;
     }
 
@@ -795,6 +800,28 @@ public class Vision extends SubsystemBase {
 
     private int getFuseCount(String label) {
         return fuseCounts.getOrDefault(label, 0);
+    }
+
+    private boolean isDebugOutputEnabled() {
+        return debugOutputEnabled;
+    }
+
+    private void putDebugBoolean(String key, boolean value) {
+        if (isDebugOutputEnabled()) {
+            // SmartDashboard.putBoolean(key, value);
+        }
+    }
+
+    private void putDebugNumber(String key, double value) {
+        if (isDebugOutputEnabled()) {
+            // SmartDashboard.putNumber(key, value);
+        }
+    }
+
+    private void putDebugString(String key, String value) {
+        if (isDebugOutputEnabled()) {
+            // SmartDashboard.putString(key, value);
+        }
     }
 
 }

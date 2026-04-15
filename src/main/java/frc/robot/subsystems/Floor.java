@@ -62,7 +62,7 @@ public Floor()
     {
         currentSpeedSetpointRps = speedRps;
         left_motor.setControl(velocityRequest.withVelocity(currentSpeedSetpointRps));
-        SmartDashboard.putNumber("Floor Setpoint RPS", currentSpeedSetpointRps);
+        // SmartDashboard.putNumber("Floor Setpoint RPS", currentSpeedSetpointRps);
     }
 
     public void setDumbSpeed(double percent)
@@ -90,7 +90,7 @@ public Floor()
     {
         currentSpeedSetpointRps = 0.0;
         left_motor.stopMotor();
-        SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
+        // SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
     private void configureMotor(TalonFX motor, InvertedValue invertedValue, String motorName) 
@@ -134,9 +134,9 @@ public Floor()
 
     public void printDiagnostics()
     {
-        SmartDashboard.putNumber("Floor Current Speed RPS", getSpeed());
-        SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
-        SmartDashboard.putBoolean("Floor Is At Speed", isAtSpeed(Constants.Floor.SPEED_TOLERANCE_RPS));
+        // SmartDashboard.putNumber("Floor Current Speed RPS", getSpeed());
+        // SmartDashboard.putNumber("Floor Speed Setpoint RPS", currentSpeedSetpointRps);
+        // SmartDashboard.putBoolean("Floor Is At Speed", isAtSpeed(Constants.Floor.SPEED_TOLERANCE_RPS));
         SmartDashboard.putNumber(
                 "Floor Current Draw Amps",
                 (left_motor.getSupplyCurrent().getValueAsDouble()

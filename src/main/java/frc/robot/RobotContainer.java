@@ -111,7 +111,7 @@ public class RobotContainer
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
         SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, true);    // TRUE = auto aim enabled by default
-        SmartDashboard.putBoolean(AUTO_AIM_LOCAL_TAG_ENABLED_KEY, true);
+        SmartDashboard.putBoolean(AUTO_AIM_LOCAL_TAG_ENABLED_KEY, false);
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
@@ -137,32 +137,23 @@ public class RobotContainer
         updateSelectedAutoPreview();
         updateMatchTimingDashboard();
 
-        if (!SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false)) 
-        {
-            return;
-        }
-        if (SmartDashboard.getBoolean(AUTO_AIM_ENABLED_KEY, true)) 
+        boolean manualShooterEnabled = SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
+        if (!manualShooterEnabled) 
         {
             return;
         }
 
-        double shooterMax = SmartDashboard.getNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
+        if (SmartDashboard.getBoolean(AUTO_AIM_ENABLED_KEY, true)) {
+            SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, false);
+        }
+
         double hoodMax = SmartDashboard.getNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
-
-        double shooterRps = MathUtil.clamp(
-            SmartDashboard.getNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0),
-            0.0,
-            shooterMax);
         double hoodAngle = MathUtil.clamp(
             SmartDashboard.getNumber(MANUAL_HOOD_ANGLE_KEY, 0.0),
             Constants.Hood.MIN_ANGLE,
             hoodMax);
 
-        s_shooter.shoot(shooterRps);
         s_hood.setAngle(hoodAngle);
-
-        SmartDashboard.putNumber("Tuning/Applied Shooter RPS", shooterRps);
-        SmartDashboard.putNumber("Tuning/Applied Hood Angle", hoodAngle);
     }
 
     private void updateSelectedAutoPreview()
@@ -184,17 +175,17 @@ public class RobotContainer
         var alliance = DriverStation.getAlliance();
         MatchTimingStatus status = getMatchTimingStatus(matchTimeRemainingSec, alliance, gameData);
 
-        SmartDashboard.putNumber(MATCH_TIME_REMAINING_KEY, matchTimeRemainingSec);
-        SmartDashboard.putString(MATCH_SCORING_PERIOD_KEY, status.scoringPeriod());
-        SmartDashboard.putNumber(MATCH_PERIOD_TIME_REMAINING_KEY, status.periodTimeRemainingSec());
-        SmartDashboard.putString(MATCH_ACTIVE_ALLIANCE_KEY, status.activeScoringAlliance());
-        SmartDashboard.putString(MATCH_FIRST_SCORING_ALLIANCE_KEY, status.firstScoringAlliance());
-        SmartDashboard.putString(MATCH_FIRST_INACTIVE_ALLIANCE_KEY, status.firstInactiveAlliance());
-        SmartDashboard.putBoolean(MATCH_CAN_SHOOT_KEY, status.canShoot());
-        SmartDashboard.putBoolean(MATCH_BOTH_CAN_SCORE_KEY, status.bothAlliancesCanScore());
-        SmartDashboard.putBoolean(MATCH_HAS_GAME_DATA_KEY, !gameData.isEmpty());
-        SmartDashboard.putString(MATCH_GAME_DATA_KEY, gameData.isEmpty() ? "None" : gameData);
-        SmartDashboard.putString(MATCH_ALLIANCE_KEY, alliance.map(Enum::name).orElse("Unknown"));
+        // SmartDashboard.putNumber(MATCH_TIME_REMAINING_KEY, matchTimeRemainingSec);
+        // SmartDashboard.putString(MATCH_SCORING_PERIOD_KEY, status.scoringPeriod());
+        // SmartDashboard.putNumber(MATCH_PERIOD_TIME_REMAINING_KEY, status.periodTimeRemainingSec());
+        // SmartDashboard.putString(MATCH_ACTIVE_ALLIANCE_KEY, status.activeScoringAlliance());
+        // SmartDashboard.putString(MATCH_FIRST_SCORING_ALLIANCE_KEY, status.firstScoringAlliance());
+        // SmartDashboard.putString(MATCH_FIRST_INACTIVE_ALLIANCE_KEY, status.firstInactiveAlliance());
+        // SmartDashboard.putBoolean(MATCH_CAN_SHOOT_KEY, status.canShoot());
+        // SmartDashboard.putBoolean(MATCH_BOTH_CAN_SCORE_KEY, status.bothAlliancesCanScore());
+        // SmartDashboard.putBoolean(MATCH_HAS_GAME_DATA_KEY, !gameData.isEmpty());
+        // SmartDashboard.putString(MATCH_GAME_DATA_KEY, gameData.isEmpty() ? "None" : gameData);
+        // SmartDashboard.putString(MATCH_ALLIANCE_KEY, alliance.map(Enum::name).orElse("Unknown"));
     }
 
     private MatchTimingStatus getMatchTimingStatus(
@@ -370,7 +361,7 @@ public class RobotContainer
                 } 
                 else 
                 {
-                    s_shooter.stopShooting();
+                    s_shooter.stop();
                 }
             }, s_shooter)
         );
@@ -397,26 +388,51 @@ public class RobotContainer
                 s_intake.setAngle(stowed);
             }
         }, s_intake)); 
-        driver.leftBumper().whileTrue(Commands.run(() -> {  // LONG SHOT
-            s_shooter.shoot(70);    
-            s_hood.setAngle(Constants.Hood.MIN_ANGLE);
+        driver.leftBumper().whileTrue(Commands.run(() -> {
+            s_shooter.shoot(70.0);
             driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, s_shooter.isAtSpeed() ? 1.0 : 0.0);
-        }, s_shooter, s_hood).finallyDo((interrupted) -> {
+        }, s_shooter).finallyDo((interrupted) -> {
             s_shooter.stop();
             driver.getHID().setRumble(GenericHID.RumbleType.kBothRumble, 0.0);
         }));
 
-        driver.leftTrigger().whileTrue(new AutoAim(
-            drivetrain,
-            s_vision,
-            s_hood,
-            s_shooter,
-            driver::getLeftY,
-            driver::getLeftX,
-            driver.getHID(),
-            MaxSpeed,
-            MaxAngularRate
-        )); // Auto aim while left trigger held.
+        driver.leftTrigger().whileTrue(Commands.either(
+            Commands.runEnd(
+                () -> {
+                    double shooterMax = SmartDashboard.getNumber(
+                        MANUAL_SHOOTER_MAX_KEY,
+                        Constants.Shooter.MAX_SPEED_RPS);
+                    double shooterRps = MathUtil.clamp(
+                        SmartDashboard.getNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0),
+                        0.0,
+                        shooterMax);
+                    double hoodMax = SmartDashboard.getNumber(
+                        MANUAL_HOOD_MAX_KEY,
+                        Constants.Hood.MAX_ANGLE);
+                    double hoodAngle = MathUtil.clamp(
+                        SmartDashboard.getNumber(MANUAL_HOOD_ANGLE_KEY, 0.0),
+                        Constants.Hood.MIN_ANGLE,
+                        hoodMax);
+
+                    s_hood.setAngle(hoodAngle);
+                    s_shooter.shoot(shooterRps);
+                },
+                () -> s_shooter.stopShooting(),
+                s_shooter,
+                s_hood),
+            new AutoAim(
+                drivetrain,
+                s_vision,
+                s_hood,
+                s_shooter,
+                driver::getLeftY,
+                driver::getLeftX,
+                driver.getHID(),
+                MaxSpeed,
+                MaxAngularRate
+            ),
+            () -> SmartDashboard.getBoolean(MANUAL_SHOOTER_ENABLE_KEY, false)
+        )); // Manual mode or auto aim while left trigger held.
 
         driver.rightTrigger().whileTrue(Commands.parallel(    // Run the floor and pulse/continuous feeder while right trigger held.
             //Commands.run(() -> s_floor.setDumbSpeed(.5), s_floor)  // TODO - try setfloorpercent instead of setdumb
@@ -476,14 +492,6 @@ public class RobotContainer
         if (selectedAuto == null) {
             return Commands.none();
         }
-
-        if (selectedAuto instanceof PathPlannerAuto pathPlannerAuto) {
-            return Commands.sequence(
-                Commands.runOnce(() -> s_vision.markPoseSeededExternally(), s_vision),
-                selectedAuto
-            );
-        }
-
         return selectedAuto;
     }
 
@@ -535,7 +543,7 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "ShootFullHopper",
         Commands.parallel(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(87.8).speedRps())), // TODO - Adjust shooter distance and speed if needed
+            Commands.runOnce(() -> s_shooter.shoot(65.54)), // TODO - Adjust shooter distance and speed if needed
             new WaitCommand(0), // Adjust this to give the shooter more time to spool up.
             Commands.parallel(  // This allows us to aim and spool up at the same time, and continue to adjust aim while feeding.
                 new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate),
@@ -550,7 +558,7 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "SpoolShooterToShootingSpeed",
         new SequentialCommandGroup(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.DISTANCE_ANGLE_SPEED.get(87.8).speedRps())) // TODO - Adjust shooter distance and speed if needed
+            Commands.runOnce(() -> s_shooter.shoot(65.54)) // TODO - Adjust shooter distance and speed if needed
             )
         );
 

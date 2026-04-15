@@ -114,7 +114,7 @@ public class Intake extends SubsystemBase
     {
         currentAngleSetPoint = angle;
         intake_pivot_motor.setControl(motionMagicVoltage.withPosition(toMotorPosition(angle)));
-        SmartDashboard.putNumber("Intake Set Point", angle);
+        // SmartDashboard.putNumber("Intake Set Point", angle);
     }
 
     public double getAngle()
@@ -141,7 +141,7 @@ public class Intake extends SubsystemBase
     {
         currentSpeedSetpointRps = speedRps;
         intake_left_roller_motor.setControl(velocityRequest.withVelocity(currentSpeedSetpointRps));
-        SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
+        // SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
     
@@ -166,7 +166,7 @@ public class Intake extends SubsystemBase
     {
         currentSpeedSetpointRps = 0.0;
         intake_left_roller_motor.stopMotor();
-        SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
+        // SmartDashboard.putNumber("Intake Speed Setpoint RPS", currentSpeedSetpointRps);
     }
 
     public void stow() 
@@ -274,16 +274,16 @@ public class Intake extends SubsystemBase
         double errorDegrees = setpointDegrees - currentAngleDegrees;
 
         SmartDashboard.putNumber("Intake Current Angle Deg", currentAngleDegrees);
-        SmartDashboard.putNumber("Intake Angle Setpoint Deg", setpointDegrees);
-        SmartDashboard.putNumber("Intake Angle Error Deg", errorDegrees);
-        SmartDashboard.putNumber("Intake Current Angle Rot", toMotorPosition(currentAngleDegrees));
-        SmartDashboard.putNumber("Intake Angle Setpoint Rot", toMotorPosition(setpointDegrees));
-        SmartDashboard.putBoolean("Intake Is Aligned", isAligned());
-        SmartDashboard.putNumber(" Intake Current Speed RPS", getSpeed());
-        SmartDashboard.putNumber(" Intake Speed Setpoint RPS", currentSpeedSetpointRps);
-        SmartDashboard.putBoolean("Intake Is At Speed", isAtSpeed(Constants.Intake.SPEED_TOLERANCE_RPS));
+        // SmartDashboard.putNumber("Intake Angle Setpoint Deg", setpointDegrees);
+        // SmartDashboard.putNumber("Intake Angle Error Deg", errorDegrees);
+        // SmartDashboard.putNumber("Intake Current Angle Rot", toMotorPosition(currentAngleDegrees));
+        // SmartDashboard.putNumber("Intake Angle Setpoint Rot", toMotorPosition(setpointDegrees));
+        // SmartDashboard.putBoolean("Intake Is Aligned", isAligned());
+        // SmartDashboard.putNumber(" Intake Current Speed RPS", getSpeed());
+        // SmartDashboard.putNumber(" Intake Speed Setpoint RPS", currentSpeedSetpointRps);
+        // SmartDashboard.putBoolean("Intake Is At Speed", isAtSpeed(Constants.Intake.SPEED_TOLERANCE_RPS));
         SmartDashboard.putNumber("Intake Pivot Current", intake_pivot_motor.getSupplyCurrent().getValueAsDouble());
-        SmartDashboard.putNumber("Intake Pivot Voltage", intake_pivot_motor.getMotorVoltage().getValueAsDouble());
+        // SmartDashboard.putNumber("Intake Pivot Voltage", intake_pivot_motor.getMotorVoltage().getValueAsDouble());
         SmartDashboard.putNumber("Intake Roller Current", intake_left_roller_motor.getSupplyCurrent().getValueAsDouble());
     }
 }
