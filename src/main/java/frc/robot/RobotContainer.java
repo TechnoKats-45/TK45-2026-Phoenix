@@ -52,6 +52,7 @@ public class RobotContainer
     private static final String MATCH_ALLIANCE_KEY = "Match/MyAlliance";
     private static final String MANUAL_SHOOTER_ENABLE_KEY = "Tuning/Manual Shooter Mode";
     private static final String AUTO_AIM_ENABLED_KEY = "Auto Aim Enabled";
+    private static final String AUTO_AIM_LOCAL_TAG_ENABLED_KEY = "AutoAim/UseLocalFrontHubTag";
     private static final String MANUAL_SHOOTER_SPEED_KEY = "Tuning/Manual Shooter RPS";
     private static final String MANUAL_HOOD_ANGLE_KEY = "Tuning/Manual Hood Angle";
     private static final String MANUAL_SHOOTER_MAX_KEY = "Tuning/Manual Shooter Max RPS";
@@ -110,6 +111,7 @@ public class RobotContainer
     {
         SmartDashboard.putBoolean(MANUAL_SHOOTER_ENABLE_KEY, false);
         SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, true);    // TRUE = auto aim enabled by default
+        SmartDashboard.putBoolean(AUTO_AIM_LOCAL_TAG_ENABLED_KEY, true);
         SmartDashboard.putNumber(MANUAL_SHOOTER_SPEED_KEY, 0.0);
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);

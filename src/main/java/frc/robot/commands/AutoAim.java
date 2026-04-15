@@ -26,6 +26,7 @@ import frc.robot.subsystems.Vision;
 
 public class AutoAim extends Command 
 {
+        private static final String LOCAL_TAG_AUTO_AIM_ENABLED_KEY = "AutoAim/UseLocalFrontHubTag";
         // Auto-aim rotation PID (local to AutoAim, not in Constants)
         private static final double ROTATION_KP = 20;           // 10 too low, but works, 50 TOO high, 25 slightly too high
         private static final double ROTATION_KI = 0.0;
@@ -97,13 +98,17 @@ public class AutoAim extends Command
                                 Optional.of(resolvedAlliance))
                         : hubCenter;
 
-                var rawHubObservation = vision.getHubObservation(Optional.of(resolvedAlliance));
-                boolean canUseHubVision = vision.hasConfiguredHubTagIds(Optional.of(resolvedAlliance));
-                Optional<Vision.HubObservation> hubObservation =
-                        !inPassingZone && canUseHubVision ? rawHubObservation : Optional.empty();
+                boolean localTagAimEnabled = SmartDashboard.getBoolean(LOCAL_TAG_AUTO_AIM_ENABLED_KEY, true);
+                boolean canUseLocalTagAim = vision.hasConfiguredPrimaryHubTagId(Optional.of(resolvedAlliance));
+                Optional<Vision.LocalHubAimObservation> localHubAimObservation =
+                        !inPassingZone && localTagAimEnabled && canUseLocalTagAim
+                                ? vision.getLocalHubAimObservation(Optional.of(resolvedAlliance))
+                                : Optional.empty();
 
-                Translation2d robotToGoal = targetPose.toPose2d().getTranslation()
-                        .minus(drivetrain.getState().Pose.getTranslation());
+                Translation2d robotToGoal = localHubAimObservation
+                        .map(Vision.LocalHubAimObservation::robotToGoalMeters)
+                        .orElseGet(() -> targetPose.toPose2d().getTranslation()
+                                .minus(drivetrain.getState().Pose.getTranslation()));
                 Rotation2d desiredHeading = robotToGoal.getAngle()
                         .plus(Rotation2d.k180deg)
                         .plus(drivetrain.getAutoAimHeadingOffset());
@@ -113,8 +118,8 @@ public class AutoAim extends Command
                                 Constants.Vision.AUTO_AIM_ROTATION_TOLERANCE_DEG);
                 }
 
-                double rangeMeters = hubObservation
-                                .map(Vision.HubObservation::rangeToHubCenterMeters)
+                double rangeMeters = localHubAimObservation
+                                .map(Vision.LocalHubAimObservation::rangeToGoalMeters)
                                 .orElseGet(() -> drivetrain.getState().Pose.getTranslation()
                                         .getDistance(targetPose.toPose2d().getTranslation()));
                 double rangeInches = Units.metersToInches(rangeMeters);
@@ -161,9 +166,13 @@ public class AutoAim extends Command
 
                 SmartDashboard.putString("AutoAim/Alliance", resolvedAlliance.name());
                 SmartDashboard.putString("AutoAim/Zone", inPassingZone ? "Passing" : "Scoring");
-                SmartDashboard.putBoolean("AutoAim/UsingVision", hubObservation.isPresent());
-                SmartDashboard.putBoolean("AutoAim/HubTagIdsConfigured", canUseHubVision);
-                SmartDashboard.putString("AutoAim/AimSource", hubObservation.map(Vision.HubObservation::source).orElse("pose"));
+                SmartDashboard.putBoolean("AutoAim/LocalTagAimEnabled", localTagAimEnabled);
+                SmartDashboard.putBoolean("AutoAim/UsingVision", localHubAimObservation.isPresent());
+                SmartDashboard.putBoolean("AutoAim/HubTagIdsConfigured", canUseLocalTagAim);
+                SmartDashboard.putString("AutoAim/AimSource", localHubAimObservation.map(Vision.LocalHubAimObservation::source).orElse("pose"));
+                SmartDashboard.putNumber(
+                        "AutoAim/ObservedHubTagId",
+                        localHubAimObservation.map(Vision.LocalHubAimObservation::fiducialId).orElse(-1));
                 SmartDashboard.putBoolean("AutoAim/TestShootMode", testShootMode);
                 SmartDashboard.putNumber("AutoAim/TargetX", targetPose.getX());
                 SmartDashboard.putNumber("AutoAim/TargetY", targetPose.getY());

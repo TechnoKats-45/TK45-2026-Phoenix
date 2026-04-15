@@ -151,6 +151,8 @@ public class Constants
         // from the front shooter cameras before falling back to pose-only aiming.
         public static final int[] BLUE_HUB_FRONT_TAG_IDS = {25,26};
         public static final int[] RED_HUB_FRONT_TAG_IDS = {9,10};
+        public static final int BLUE_HUB_PRIMARY_FRONT_TAG_ID = 26;
+        public static final int RED_HUB_PRIMARY_FRONT_TAG_ID = 10;
 
         public static final double AUTO_AIM_TRANSLATION_DEADBAND = 0.1;
 

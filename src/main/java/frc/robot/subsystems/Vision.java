@@ -70,6 +70,13 @@ public class Vision extends SubsystemBase {
             String source) {
     }
 
+    public record LocalHubAimObservation(
+            Translation2d robotToGoalMeters,
+            double rangeToGoalMeters,
+            int fiducialId,
+            String source) {
+    }
+
     private final Drivetrain drivetrain;
     private final AprilTagFieldLayout fieldLayout;
     private final List<CameraPoseSource> cameraPoseSources;
@@ -205,6 +212,27 @@ public class Vision extends SubsystemBase {
         return Optional.of(new HubObservation(average, rangeToHubCenterMeters, robotToTargets.size(), "tags"));
     }
 
+    public Optional<LocalHubAimObservation> getLocalHubAimObservation(Optional<Alliance> alliance) {
+        int preferredTagId = getPreferredHubFrontTagId(alliance);
+        if (preferredTagId <= 0) {
+            return Optional.empty();
+        }
+
+        for (CameraPoseSource source : cameraPoseSources) {
+            if (!source.useForHubObservation()) {
+                continue;
+            }
+
+            Optional<LocalHubAimObservation> observation = getLatestStoredResult(source.label())
+                    .flatMap(result -> extractLocalHubAimObservation(result, source.robotToCamera(), alliance, preferredTagId));
+            if (observation.isPresent()) {
+                return observation;
+            }
+        }
+
+        return Optional.empty();
+    }
+
     public boolean hasConfiguredHubTagIds(Optional<Alliance> alliance) {
         int[] ids = alliance.orElse(Alliance.Blue) == Alliance.Red
                 ? Constants.Vision.RED_HUB_FRONT_TAG_IDS
@@ -216,6 +244,10 @@ public class Vision extends SubsystemBase {
             }
         }
         return false;
+    }
+
+    public boolean hasConfiguredPrimaryHubTagId(Optional<Alliance> alliance) {
+        return getPreferredHubFrontTagId(alliance) > 0;
     }
 
     private void collectHubTargets(
@@ -239,6 +271,42 @@ public class Vision extends SubsystemBase {
         }
     }
 
+    private Optional<LocalHubAimObservation> extractLocalHubAimObservation(
+            PhotonPipelineResult result,
+            Transform3d robotToCamera,
+            Optional<Alliance> alliance,
+            int preferredTagId) {
+        if (result == null || !result.hasTargets()) {
+            return Optional.empty();
+        }
+
+        Pose3d hubCenter = FieldConstants.Hub.getCenterForAlliance(alliance);
+        Optional<Pose3d> preferredTagPose = fieldLayout.getTagPose(preferredTagId);
+        if (preferredTagPose.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Transform3d tagToHubGoal = new Transform3d(preferredTagPose.get(), hubCenter);
+        for (PhotonTrackedTarget target : result.getTargets()) {
+            if (target.getFiducialId() != preferredTagId) {
+                continue;
+            }
+
+            Pose3d robotToTagPose = Pose3d.kZero
+                    .transformBy(robotToCamera)
+                    .transformBy(target.getBestCameraToTarget());
+            Pose3d robotToGoalPose = robotToTagPose.transformBy(tagToHubGoal);
+            Translation2d robotToGoal = robotToGoalPose.getTranslation().toTranslation2d();
+            return Optional.of(new LocalHubAimObservation(
+                    robotToGoal,
+                    robotToGoal.getNorm(),
+                    preferredTagId,
+                    "local-tag"));
+        }
+
+        return Optional.empty();
+    }
+
     private boolean isAllianceHubTarget(int fiducialId, Optional<Alliance> alliance) {
         int[] ids = alliance.orElse(Alliance.Blue) == Alliance.Red
                 ? Constants.Vision.RED_HUB_FRONT_TAG_IDS
@@ -253,6 +321,12 @@ public class Vision extends SubsystemBase {
             }
         }
         return false;
+    }
+
+    private int getPreferredHubFrontTagId(Optional<Alliance> alliance) {
+        return alliance.orElse(Alliance.Blue) == Alliance.Red
+                ? Constants.Vision.RED_HUB_PRIMARY_FRONT_TAG_ID
+                : Constants.Vision.BLUE_HUB_PRIMARY_FRONT_TAG_ID;
     }
 
     private void processCamera(CameraPoseSource source) {
