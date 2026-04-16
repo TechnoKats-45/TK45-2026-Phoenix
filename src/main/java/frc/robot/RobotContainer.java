@@ -59,9 +59,6 @@ public class RobotContainer
     private static final String MANUAL_HOOD_MAX_KEY = "Tuning/Manual Hood Max Angle";
     private static final String SHOOTER_IDLE_AT_25_KEY = "Shooter Idle @ 25%";
     private static final String SHOOTER_IDLE_PERCENT_KEY = "Shooter/IdlePercent";
-    private static final String FEEDER_PULSE_ENABLED_KEY = "Feeder/Pulse Enabled";
-    private static final double FEEDER_PULSE_ON_SECONDS = 0.1;
-    private static final double FEEDER_PULSE_OFF_SECONDS = 0.2;
     private static final double SHOOTER_PERCENT_STEP = 0.05;
 
     // Declare and instantiate variables:
@@ -118,7 +115,6 @@ public class RobotContainer
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
         SmartDashboard.putBoolean(SHOOTER_IDLE_AT_25_KEY, false);
         SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
-        SmartDashboard.putBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
         SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, true);
         SmartDashboard.putBoolean(Drivetrain.TILT_BASED_VISION_UPDATES_ENABLED_KEY, true);
         SmartDashboard.putData("Zero Intake", Commands.runOnce(s_intake::zeroEncoder, s_intake).ignoringDisable(true));
@@ -461,27 +457,8 @@ public class RobotContainer
             s_feeder
         ));
         
-        
-        // Assign Operator Controls:
-        operator.a().onTrue(Commands.runOnce(() -> {
-            feederPulseEnabled = !feederPulseEnabled;
-            SmartDashboard.putBoolean(FEEDER_PULSE_ENABLED_KEY, feederPulseEnabled);
-        }));
-
-        operator.y().onTrue(Commands.runOnce(() -> {
-            boolean enabled = SmartDashboard.getBoolean(AUTO_AIM_ENABLED_KEY, true);
-            SmartDashboard.putBoolean(AUTO_AIM_ENABLED_KEY, !enabled);
-        }));
         operator.povLeft().onTrue(Commands.runOnce(() -> drivetrain.adjustAutoAimHeadingOffsetDeg(2.5)));
         operator.povRight().onTrue(Commands.runOnce(() -> drivetrain.adjustAutoAimHeadingOffsetDeg(-2.5)));
-        operator.povUp().onTrue(Commands.runOnce(() -> {
-            shooterIdlePercent = MathUtil.clamp(shooterIdlePercent + SHOOTER_PERCENT_STEP, 0.0, 1.0);
-            SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
-        }));
-        operator.povDown().onTrue(Commands.runOnce(() -> {
-            shooterIdlePercent = MathUtil.clamp(shooterIdlePercent - SHOOTER_PERCENT_STEP, 0.0, 1.0);
-            SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
-        }));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
