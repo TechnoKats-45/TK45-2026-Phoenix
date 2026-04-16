@@ -39,7 +39,7 @@
             "title": "Hood Angle",
             "x": 256.0,
             "y": 0.0,
-            "width": 192.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Large Text Display",
             "properties": {
@@ -53,7 +53,7 @@
             "x": 0.0,
             "y": 256.0,
             "width": 704.0,
-            "height": 512.0,
+            "height": 384.0,
             "type": "Field",
             "properties": {
               "topic": "/Pose",
@@ -83,83 +83,16 @@
             }
           },
           {
-            "title": "Auto Aim Disabled (On = Disable)",
+            "title": "Intake Agitation",
             "x": 1472.0,
-            "y": 128.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Toggle Switch",
-            "properties": {
-              "topic": "/SmartDashboard/Auto Aim Disabled (On = Disable)",
-              "period": 0.06,
-              "data_type": "boolean"
-            }
-          },
-          {
-            "title": "Intake Agitation Enabled",
-            "x": 1472.0,
-            "y": 256.0,
-            "width": 256.0,
+            "y": 384.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Toggle Switch",
             "properties": {
               "topic": "/SmartDashboard/Auto Feed/Intake Agitation Enabled",
               "period": 0.06,
               "data_type": "boolean"
-            }
-          },
-          {
-            "title": "EnableTiltBasedPoseUpdate",
-            "x": 1472.0,
-            "y": 384.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Toggle Switch",
-            "properties": {
-              "topic": "/SmartDashboard/Vision/EnableTiltBasedPoseUpdate",
-              "period": 0.06,
-              "data_type": "boolean"
-            }
-          },
-          {
-            "title": "UsingVision",
-            "x": 1472.0,
-            "y": 512.0,
-            "width": 256.0,
-            "height": 128.0,
-            "type": "Toggle Switch",
-            "properties": {
-              "topic": "/SmartDashboard/AutoAim/UsingVision",
-              "period": 0.06,
-              "data_type": "boolean"
-            }
-          },
-          {
-            "title": "PitchDeg",
-            "x": 704.0,
-            "y": 640.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Drivetrain/PitchDeg",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "RollDeg",
-            "x": 832.0,
-            "y": 640.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Drivetrain/RollDeg",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
             }
           },
           {
@@ -235,10 +168,10 @@
             }
           },
           {
-            "title": "Intake Current Angle Deg",
+            "title": "Intake Angle",
             "x": 256.0,
             "y": 128.0,
-            "width": 192.0,
+            "width": 128.0,
             "height": 128.0,
             "type": "Large Text Display",
             "properties": {
@@ -249,7 +182,7 @@
           },
           {
             "title": "Cal Intake Stowed",
-            "x": 448.0,
+            "x": 384.0,
             "y": 128.0,
             "width": 256.0,
             "height": 128.0,
@@ -263,8 +196,8 @@
           },
           {
             "title": "Shooter Idle @ 25%",
-            "x": 1728.0,
-            "y": 0.0,
+            "x": 1600.0,
+            "y": 384.0,
             "width": 128.0,
             "height": 128.0,
             "type": "Toggle Switch",
@@ -272,6 +205,55 @@
               "topic": "/SmartDashboard/Shooter Idle @ 25%",
               "period": 0.06,
               "data_type": "boolean"
+            }
+          },
+          {
+            "title": "CanShoot",
+            "x": 1472.0,
+            "y": 128.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Boolean Box",
+            "properties": {
+              "topic": "/SmartDashboard/Match/CanShoot",
+              "period": 0.06,
+              "data_type": "boolean",
+              "true_color": 4283215696,
+              "false_color": 4294198070,
+              "true_icon": "None",
+              "false_icon": "None"
+            }
+          },
+          {
+            "title": "ScoringPeriodRemainingSec",
+            "x": 1472.0,
+            "y": 256.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Match Time",
+            "properties": {
+              "topic": "/SmartDashboard/Match/ScoringPeriodRemainingSec",
+              "period": 0.06,
+              "data_type": "double",
+              "time_display_mode": "Minutes and Seconds",
+              "red_start_time": 20,
+              "yellow_start_time": 30
+            }
+          },
+          {
+            "title": "MatchTimeRemainingSec",
+            "x": 1472.0,
+            "y": 512.0,
+            "width": 256.0,
+            "height": 128.0,
+            "type": "Match Time",
+            "properties": {
+              "topic": "/SmartDashboard/Match/MatchTimeRemainingSec",
+              "period": 0.06,
+              "data_type": "double",
+              "time_display_mode": "Minutes and Seconds",
+              "red_start_time": 20,
+              "yellow_start_time": 30
             }
           }
         ]
@@ -897,60 +879,6 @@
               "time_displayed": 5.0,
               "color": 4278238420,
               "line_width": 2.0
-            }
-          },
-          {
-            "title": "Intake Current Angle",
-            "x": 640.0,
-            "y": 384.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Intake Current Angle",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "Intake Angle Setpoint",
-            "x": 512.0,
-            "y": 384.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Text Display",
-            "properties": {
-              "topic": "/SmartDashboard/Intake Angle Setpoint",
-              "period": 0.06,
-              "data_type": "double",
-              "show_submit_button": false
-            }
-          },
-          {
-            "title": "Auto Aim Disabled (On = Disable)",
-            "x": 896.0,
-            "y": 384.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Toggle Switch",
-            "properties": {
-              "topic": "/SmartDashboard/Auto Aim Disabled (On = Disable)",
-              "period": 0.06,
-              "data_type": "boolean"
-            }
-          },
-          {
-            "title": "UsingVision",
-            "x": 1024.0,
-            "y": 384.0,
-            "width": 128.0,
-            "height": 128.0,
-            "type": "Toggle Switch",
-            "properties": {
-              "topic": "/SmartDashboard/AutoAim/UsingVision",
-              "period": 0.06,
-              "data_type": "boolean"
             }
           }
         ]

@@ -175,13 +175,13 @@ public class RobotContainer
         var alliance = DriverStation.getAlliance();
         MatchTimingStatus status = getMatchTimingStatus(matchTimeRemainingSec, alliance, gameData);
 
-        // SmartDashboard.putNumber(MATCH_TIME_REMAINING_KEY, matchTimeRemainingSec);
-        // SmartDashboard.putString(MATCH_SCORING_PERIOD_KEY, status.scoringPeriod());
-        // SmartDashboard.putNumber(MATCH_PERIOD_TIME_REMAINING_KEY, status.periodTimeRemainingSec());
+        SmartDashboard.putNumber(MATCH_TIME_REMAINING_KEY, matchTimeRemainingSec);
+        //SmartDashboard.putString(MATCH_SCORING_PERIOD_KEY, status.scoringPeriod());
+        SmartDashboard.putNumber(MATCH_PERIOD_TIME_REMAINING_KEY, status.periodTimeRemainingSec());
         // SmartDashboard.putString(MATCH_ACTIVE_ALLIANCE_KEY, status.activeScoringAlliance());
         // SmartDashboard.putString(MATCH_FIRST_SCORING_ALLIANCE_KEY, status.firstScoringAlliance());
         // SmartDashboard.putString(MATCH_FIRST_INACTIVE_ALLIANCE_KEY, status.firstInactiveAlliance());
-        // SmartDashboard.putBoolean(MATCH_CAN_SHOOT_KEY, status.canShoot());
+        SmartDashboard.putBoolean(MATCH_CAN_SHOOT_KEY, status.canShoot());
         // SmartDashboard.putBoolean(MATCH_BOTH_CAN_SCORE_KEY, status.bothAlliancesCanScore());
         // SmartDashboard.putBoolean(MATCH_HAS_GAME_DATA_KEY, !gameData.isEmpty());
         // SmartDashboard.putString(MATCH_GAME_DATA_KEY, gameData.isEmpty() ? "None" : gameData);
@@ -548,7 +548,7 @@ public class RobotContainer
             Commands.parallel(  // This allows us to aim and spool up at the same time, and continue to adjust aim while feeding.
                 new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate),
                 Commands.sequence(
-                    new WaitCommand(0), // Adjust this to give autoaim more time to settle.
+                    new WaitCommand(0.5), // Adjust this to give autoaim more time to settle.
                     new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(5)  // TODO - Adjust period that shooter shoots for
                 )
             )
