@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -106,6 +107,7 @@ public class Vision extends SubsystemBase {
     private static final double STATIONARY_POSE_RECOVERY_TRANSLATION_ERROR_M = 3.0;
     private static final double STATIONARY_POSE_RECOVERY_CLOSE_TAG_DISTANCE_M = 2.5;
     private static final String VISION_POSE_UPDATES_ALLOWED_KEY = "Vision/PoseUpdatesAllowedByRobotState";
+    private static final Set<Integer> IGNORED_TAG_IDS = Set.of(7, 23);
 
     public Vision(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
@@ -350,8 +352,8 @@ public class Vision extends SubsystemBase {
         }
 
         PhotonPipelineResult latest = results.get(results.size() - 1);
-        setLatestStoredResult(label, latest);
-        PhotonPipelineResult result = latest;
+        PhotonPipelineResult result = filterIgnoredTags(latest);
+        setLatestStoredResult(label, result);
         putDebugBoolean("Vision/" + label + "/HasTarget", result.hasTargets());
 
         if (!result.hasTargets()) {
@@ -738,7 +740,7 @@ public class Vision extends SubsystemBase {
             return Optional.empty();
         }
 
-        PhotonPipelineResult latest = unread.get(unread.size() - 1);
+        PhotonPipelineResult latest = filterIgnoredTags(unread.get(unread.size() - 1));
         if (!latest.hasTargets()) {
             return Optional.empty();
         }
@@ -751,6 +753,35 @@ public class Vision extends SubsystemBase {
 
         MeasurementStats measurementStats = getMeasurementStats(estimate.get().targetsUsed);
         return getQualityRejectReason(measurementStats) == null ? estimate : Optional.empty();
+    }
+
+    private PhotonPipelineResult filterIgnoredTags(PhotonPipelineResult result) {
+        if (result == null || !result.hasTargets()) {
+            return result;
+        }
+
+        List<PhotonTrackedTarget> filteredTargets = new ArrayList<>(result.targets.size());
+        boolean removedIgnoredTag = false;
+        for (PhotonTrackedTarget target : result.targets) {
+            if (shouldIgnoreTag(target.getFiducialId())) {
+                removedIgnoredTag = true;
+                continue;
+            }
+            filteredTargets.add(target);
+        }
+
+        if (!removedIgnoredTag) {
+            return result;
+        }
+
+        return new PhotonPipelineResult(
+                result.metadata,
+                filteredTargets,
+                Optional.empty());
+    }
+
+    private boolean shouldIgnoreTag(int fiducialId) {
+        return IGNORED_TAG_IDS.contains(fiducialId);
     }
 
     private Optional<EstimatedRobotPose> pickBetterEstimate(

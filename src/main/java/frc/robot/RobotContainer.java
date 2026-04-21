@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
+import edu.wpi.first.wpilibj2.command.ParallelDeadlineGroup;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -76,13 +77,12 @@ public class RobotContainer
             .withDeadband(MaxSpeed * 0.1).withRotationalDeadband(MaxAngularRate * 0.1) // Add a 10% deadband
             .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
 
-    private final Telemetry logger = new Telemetry(MaxSpeed);
-
     private final CommandXboxController driver = new CommandXboxController(0);
     private final CommandXboxController operator = new CommandXboxController(1);
     private final CommandXboxController testController = new CommandXboxController(2);
 
     public final Drivetrain drivetrain = TunerConstants.createDrivetrain();
+    private final Telemetry logger = new Telemetry(MaxSpeed, drivetrain);
 
     private final Intake s_intake = new Intake();
     private final Hood s_hood = new Hood();
@@ -93,7 +93,7 @@ public class RobotContainer
     private final SendableChooser<Command> autoChooser;
     private final Timer feederPulseTimer = new Timer();
     private boolean feederPulseEnabled = true;
-    private double shooterIdlePercent = 0.25;
+    private double shooterIdlePercent = 0.4;
 
     public RobotContainer() 
     {
@@ -113,7 +113,7 @@ public class RobotContainer
         SmartDashboard.putNumber(MANUAL_HOOD_ANGLE_KEY, Constants.Hood.MIN_ANGLE);
         SmartDashboard.putNumber(MANUAL_SHOOTER_MAX_KEY, Constants.Shooter.MAX_SPEED_RPS);
         SmartDashboard.putNumber(MANUAL_HOOD_MAX_KEY, Constants.Hood.MAX_ANGLE);
-        SmartDashboard.putBoolean(SHOOTER_IDLE_AT_25_KEY, false);
+        SmartDashboard.putBoolean(SHOOTER_IDLE_AT_25_KEY, true);
         SmartDashboard.putNumber(SHOOTER_IDLE_PERCENT_KEY, shooterIdlePercent);
         SmartDashboard.putBoolean(AutoFeed.INTAKE_AGITATION_ENABLED_KEY, true);
         SmartDashboard.putBoolean(Drivetrain.TILT_BASED_VISION_UPDATES_ENABLED_KEY, true);
@@ -353,7 +353,12 @@ public class RobotContainer
 
                 if (shooterIdleAt25Enabled && !manualShooterEnabled) 
                 {
-                    s_shooter.setShooterPercent(shooterIdlePercent);
+                    double idleRps = shooterIdlePercent * Constants.Shooter.MAX_SPEED_RPS;
+                    if (s_shooter.getSpeed() <= idleRps + Constants.Shooter.SPEED_TOLERANCE_RPS) {
+                        s_shooter.setShooterPercent(shooterIdlePercent);
+                    } else {
+                        s_shooter.stop();
+                    }
                 } 
                 else 
                 {
@@ -413,7 +418,7 @@ public class RobotContainer
                     s_hood.setAngle(hoodAngle);
                     s_shooter.shoot(shooterRps);
                 },
-                () -> s_shooter.stopShooting(),
+                () -> s_shooter.stop(),
                 s_shooter,
                 s_hood),
             new AutoAim(
@@ -509,12 +514,16 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "ShootPreloadFromStaticShooter",
         Commands.parallel(
-            Commands.runOnce(() -> s_shooter.shoot(Constants.Shooter.SHOOTER_SPEED_CLOSE)),
-            Commands.sequence(
-                new WaitCommand(1.5),                                       // TODO - Adjust shooter startup time
-                new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(3)    // TODO - Adjust period that shooter shoots for
-                )
+            Commands.runOnce(() -> s_shooter.shoot(65.54)), // TODO - Adjust shooter distance and speed if needed
+            new WaitCommand(0), // Adjust this to give the shooter more time to spool up.
+            new ParallelDeadlineGroup(
+                Commands.sequence(
+                    new WaitCommand(2), // Adjust this to give autoaim more time to settle.
+                    new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(1.5)  // TODO - Adjust period that shooter shoots for
+                ),
+                new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate)
             )
+        )
         );
 
         NamedCommands.registerCommand(
@@ -522,12 +531,12 @@ public class RobotContainer
         Commands.parallel(
             Commands.runOnce(() -> s_shooter.shoot(65.54)), // TODO - Adjust shooter distance and speed if needed
             new WaitCommand(0), // Adjust this to give the shooter more time to spool up.
-            Commands.parallel(  // This allows us to aim and spool up at the same time, and continue to adjust aim while feeding.
-                new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate),
+            new ParallelDeadlineGroup(
                 Commands.sequence(
-                    new WaitCommand(0.5), // Adjust this to give autoaim more time to settle.
+                    new WaitCommand(1.25), // Adjust this to give autoaim more time to settle.
                     new AutoFeed(s_intake, s_floor, s_feeder).withTimeout(5)  // TODO - Adjust period that shooter shoots for
-                )
+                ),
+                new AutoAim(drivetrain, s_vision, s_hood, s_shooter, null, null, null, MaxSpeed, MaxAngularRate)
             )
         )
         );
@@ -542,7 +551,7 @@ public class RobotContainer
         NamedCommands.registerCommand(
         "StopShooter",
         new SequentialCommandGroup(
-            Commands.runOnce(() -> s_shooter.stop())
+            Commands.runOnce(() -> s_shooter.stop(), s_shooter)
             )
         );
     }

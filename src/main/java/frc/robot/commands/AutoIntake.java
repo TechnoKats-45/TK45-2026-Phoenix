@@ -23,7 +23,7 @@ public class AutoIntake extends Command
     @Override
     public void initialize() 
     {
-        intake.setAngle(0);
+        intake.setAngle(20);
         feeder.useIntakeReverseCurrentLimits();
     }
 

@@ -70,9 +70,9 @@ public class Constants
     public static class Shooter 
     {
         public static final double MAX_SPEED_RPS = 100.0;
-        public static final double SPEED_TOLERANCE_RPS = 2.0;
+        public static final double SPEED_TOLERANCE_RPS = 3.0;
 
-        public static final double SHOOTER_SPEED_CLOSE = 60.0; // TODO - TUNE 
+        public static final double SHOOTER_SPEED_CLOSE = 60.0; 
 
         public record ShotProfile(double hoodDeg, double speedRps) {}
 
@@ -81,9 +81,9 @@ public class Constants
         {
             // Format: distance_inches -> ShotProfile(hood_deg, speed_rps)
             // Example: DISTANCE_ANGLE_SPEED.put(120.0, new ShotProfile(22.0, 70.0));
-            DISTANCE_ANGLE_SPEED.put(79.0, new ShotProfile(Hood.MIN_ANGLE, 50.54));
-            DISTANCE_ANGLE_SPEED.put(109.0, new ShotProfile(Hood.MIN_ANGLE, 65.54));
-            DISTANCE_ANGLE_SPEED.put(128.0, new ShotProfile(Hood.MIN_ANGLE, 66.54));
+            DISTANCE_ANGLE_SPEED.put(79.0, new ShotProfile(Hood.MIN_ANGLE, 60));
+            DISTANCE_ANGLE_SPEED.put(109.0, new ShotProfile(Hood.MIN_ANGLE, 65));
+            DISTANCE_ANGLE_SPEED.put(128.0, new ShotProfile(Hood.MIN_ANGLE, 70));
         }
 
         public static ShotProfile getShotProfileForDistanceInches(double distanceInches) {

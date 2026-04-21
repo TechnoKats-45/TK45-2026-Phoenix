@@ -13,7 +13,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "4.A Left_Bump_MidRush"
+            "pathName": "5.A Right_Bump_MidRush"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "ShootFullHopper"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "3.B Right_Preload_To_Mid"
           }
         },
         {
@@ -25,19 +37,13 @@
         {
           "type": "named",
           "data": {
-            "name": "StopShooter"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "1.B Left_Preload_To_Mid"
+            "name": "StopIntaking"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "StopIntaking"
+            "name": "StopShooter"
           }
         }
       ]

@@ -60,9 +60,9 @@ public class TunerConstants {
             new CurrentLimitsConfigs()
                 // Helps prevent voltage sag / brownouts
                 // Reduces stress on wiring and breakers
-                .withStatorCurrentLimit(Amps.of(80))
+                .withStatorCurrentLimit(Amps.of(60))
                 .withStatorCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(40) // Increase if too slow, decrease if brownouts occur
+                .withSupplyCurrentLimit(30) // Increase if too slow, decrease if brownouts occur
                 .withSupplyCurrentLimitEnable(true)
         );
     private static final TalonFXConfiguration steerInitialConfigs = new TalonFXConfiguration()

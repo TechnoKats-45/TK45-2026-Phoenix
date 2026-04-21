@@ -13,7 +13,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "4.A Left_Bump_MidRush"
+            "pathName": "2.A Mid_Preload"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "ShootPreloadFromStaticShooter"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "2.B Mid_To_Depot"
           }
         },
         {
@@ -25,25 +37,19 @@
         {
           "type": "named",
           "data": {
-            "name": "StopShooter"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "1.B Left_Preload_To_Mid"
+            "name": "StopIntaking"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "StopIntaking"
+            "name": "StopShooter"
           }
         }
       ]
     }
   },
   "resetOdom": true,
-  "folder": "Double Mid Rush",
+  "folder": "Depot",
   "choreoAuto": false
 }

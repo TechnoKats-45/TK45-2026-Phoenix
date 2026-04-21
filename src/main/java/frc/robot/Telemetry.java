@@ -31,14 +31,22 @@ import org.json.simple.parser.ParseException;
 
 public class Telemetry {
     private final double MaxSpeed;
+    private final frc.robot.subsystems.Drivetrain drivetrain;
+    private static final String[] DRIVE_CURRENT_KEYS = new String[] {
+        "Swerve/FrontLeftDriveCurrentAmps",
+        "Swerve/FrontRightDriveCurrentAmps",
+        "Swerve/BackLeftDriveCurrentAmps",
+        "Swerve/BackRightDriveCurrentAmps"
+    };
 
     /**
      * Construct a telemetry object, with the specified max speed of the robot
      * 
      * @param maxSpeed Maximum speed in meters per second
      */
-    public Telemetry(double maxSpeed) {
+    public Telemetry(double maxSpeed, frc.robot.subsystems.Drivetrain drivetrain) {
         MaxSpeed = maxSpeed;
+        this.drivetrain = drivetrain;
         SignalLogger.start();
 
         /* Set up the module state Mechanism2d telemetry */
@@ -248,6 +256,9 @@ public class Telemetry {
             m_moduleSpeeds[i].setAngle(state.ModuleStates[i].angle);
             m_moduleDirections[i].setAngle(state.ModuleStates[i].angle);
             m_moduleSpeeds[i].setLength(state.ModuleStates[i].speedMetersPerSecond / (2 * MaxSpeed));
+            SmartDashboard.putNumber(
+                DRIVE_CURRENT_KEYS[i],
+                drivetrain.getModule(i).getDriveMotor().getSupplyCurrent().getValueAsDouble());
         }
     }
 }
