@@ -79,8 +79,8 @@ public class Shooter extends SubsystemBase
         configureFollowers();
         StatusCode status = left_shooter.setControl(
                 velocityRequest
-                        .withVelocity(RotationsPerSecond.of(speedRPS))
-                        .withFeedForward(REQUEST_FEEDFORWARD_AMPS));    // currently 2A
+                        .withVelocity(RotationsPerSecond.of(speedRPS)));
+                        //.withFeedForward(REQUEST_FEEDFORWARD_AMPS));    // currently 2A
         if (!status.isOK()) {
             System.out.println("Left Shooter setControl failed: " + status);
         }
